@@ -15,6 +15,14 @@ yang tidak diberikan formula spreadsheet atau AI cleaner:
 3. **Kontrak data yang tercetak.** Aturan validasi dan ambang proyek dibaca di
    `/data-contract`, bukan tersembunyi di kepala seseorang.
 
+## Verifikasi
+
+- `npm run typecheck`, `npm run lint`, dan `npm run build` lulus.
+- Demo desktop: 94 langkah lulus, tanpa console error.
+- Demo mobile 390x844: 41 langkah lulus, tanpa overflow dan tanpa console error.
+- Interaksi demo: buat proyek, dialog sumber, halaman agent, dan pengaturan lulus.
+- Bukti screenshot disimpan di `~/.browserqa/artifacts/` pada mesin QA.
+
 ## Stack
 
 | Lapisan | Teknologi |
