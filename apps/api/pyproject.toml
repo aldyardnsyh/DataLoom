@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dataloom-api"
+version = "0.1.0"
+description = "DataLoom API: auth, orgs, projects, sources, ingest hot path, SSE, scheduler, query service."
+requires-python = ">=3.11,<3.12"
+
+# EXACT PINS. Nothing installed in this session. Verify resolution on staging (UV-14).
+dependencies = [
+    "fastapi==0.118.0",
+    "uvicorn[standard]==0.37.0",
+    "pydantic==2.12.5",
+    "pydantic-settings==2.12.0",
+    "sqlalchemy[asyncio]==2.0.43",
+    "asyncpg==0.30.0",
+    "alembic==1.16.4",
+    "redis==5.4.1",
+    "argon2-cffi==25.1.0",
+    "cryptography==46.0.1",
+    "boto3==1.39.10",
+    "httpx==0.28.1",
+    "orjson==3.13.0",
+    "duckdb==1.4.1",
+    "sqlglot==27.5.0",
+    "prometheus-client==0.23.0",
+    "apscheduler==3.11.0",
+    "greenlet==3.2.4",
+    "python-multipart==0.0.20",
+    "dataloom-contracts",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.uv.sources]
+dataloom-contracts = { path = "../../packages/contracts", editable = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["../../tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]

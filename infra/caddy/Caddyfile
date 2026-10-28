@@ -1,0 +1,49 @@
+# Caddyfile - TLS termination and reverse proxy.
+#
+# Staging uses a REAL domain so Caddy can obtain a certificate automatically.
+# Replace {$DOMAIN} through the environment; never hardcode a production domain
+# in the repository.
+
+{
+    # Uncomment for a staging host without public DNS:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    # Ingest has its own hard body limit in the API (256 KB). Caddy enforces a
+    # slightly larger ceiling so the API can return its own 413 JSON envelope.
+    @ingest path /v1/ingest/*
+    handle @ingest {
+        request_body {
+            max_size 300KB
+        }
+        reverse_proxy api:8000
+    }
+
+    # Uploads go straight to object storage from the browser (presigned PUT),
+    # so only the small JSON control calls hit the API here.
+    handle /v1/* {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        reverse_proxy web:3000
+    }
+
+    header {
+        # Baseline hardening; the API also sets its own security headers.
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        X-Frame-Options DENY
+        -Server
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
+

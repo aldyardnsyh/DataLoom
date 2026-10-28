@@ -1,0 +1,28 @@
+﻿# --- Agent worker image ----------------------------------------------------
+FROM python:3.11-slim-bookworm AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY packages/contracts /app/packages/contracts
+COPY apps/agents /app/apps/agents
+
+WORKDIR /app/apps/agents
+RUN pip install --no-cache-dir -e /app/packages/contracts \
+    && pip install --no-cache-dir -e .
+
+RUN useradd --create-home --uid 10003 dataloom \
+    && chown -R dataloom:dataloom /app
+USER dataloom
+
+# The agent worker is triggered through the API; it exposes no port.
+# AGENT_EXECUTION_ENABLED must be true for it to call a model.
+CMD ["python", "-m", "app"]
+

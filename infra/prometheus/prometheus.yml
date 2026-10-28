@@ -1,0 +1,18 @@
+﻿# Prometheus scrape config for the observability profile (FR-042).
+# Only real endpoints are scraped; nothing is generated.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: dataloom-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+
+  # The worker exposes metrics on 9101 (see apps/worker/app/metrics.py::serve).
+  # Enable by calling serve() from the worker entrypoint in an environment that
+  # wants it; otherwise this target will simply be DOWN.
+  - job_name: dataloom-worker
+    static_configs:
+      - targets: ["worker:9101"]

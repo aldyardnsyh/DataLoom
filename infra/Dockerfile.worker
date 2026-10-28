@@ -1,0 +1,27 @@
+﻿# --- Worker image ----------------------------------------------------------
+FROM python:3.11-slim-bookworm AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY packages/contracts /app/packages/contracts
+COPY apps/worker /app/apps/worker
+
+WORKDIR /app/apps/worker
+RUN pip install --no-cache-dir -e /app/packages/contracts \
+    && pip install --no-cache-dir -e .
+
+RUN mkdir -p /data/duckdb \
+    && useradd --create-home --uid 10002 dataloom \
+    && chown -R dataloom:dataloom /app /data
+USER dataloom
+
+# No exposed port: the worker has no inbound interface.
+CMD ["python", "-m", "app.main"]

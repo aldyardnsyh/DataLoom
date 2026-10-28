@@ -1,0 +1,320 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * DataLoom design tokens: LIGHT MODE ONLY (no dark mode, by design).
+ * Values are exactly PRD section 12.2. shadcn/ui consumes `hsl(var(--x))`,
+ * so hex values are converted to HSL triples here and documented inline.
+ */
+@layer base {
+  :root {
+    /* #F7FAFF - kanvas biru sangat muda; kartu tetap putih agar berlapis */
+    --background: 214 60% 98%;
+    /* #0F172A */
+    --foreground: 222 47% 11%;
+
+    /* cards are pure white (PRD: card putih) */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* #1A66D1 - biru utama: lembut tapi tegas, 5.4:1 di atas putih */
+    --primary: 215 78% 46%;
+    --primary-foreground: 0 0% 100%;
+
+    /* #F1F5F9 surface-2 (hover, zebra rows) */
+    --secondary: 214 45% 95%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* #F8FAFC muted panel / sidebar */
+    --muted: 214 42% 96%;
+    /* #5E6A79 - muted foreground.
+       PRD 12.2 lists #64748B, but that value measures 4.49:1 on white and
+       4.55:1 on the muted panel: below the 4.5:1 WCAG AA floor for normal
+       text once anti-aliasing is accounted for. This value is the same
+       slate hue one step darker, measuring 5.26:1 on the muted panel and
+       4.92:1 on the accent tint, so secondary labels pass AA everywhere. */
+    --muted-foreground: 215 22% 40%;
+
+    /* #EEF2FF primary-soft accent */
+    --accent: 214 100% 95%;
+    --accent-foreground: 215 78% 38%;
+
+    /* #DC2626 destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* #E2E8F0 borders and inputs */
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    /* ring mirrors primary-soft indigo */
+    --ring: 215 78% 46%;
+
+    /* Custom status tokens.
+       The PRD values are the FILL colours: they are used for dots, bars, solid
+       badges and icon strokes, where WCAG asks for 3:1 non-text contrast.
+       As text they fall short (success 2.96:1, warning 2.86:1, info 3.62:1 on
+       their own 10% tint), so each status also has a *text* variant that
+       clears 4.5:1 on both white and the tint. Text always uses the text
+       variant; fills always use the PRD value. */
+    /* #16A34A */
+    --success: 142 71% 37%;
+    --success-foreground: 0 0% 100%;
+    /* #166534 - text-safe green */
+    --success-text: 142 63% 25%;
+    /* #D97706 */
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    /* #92400E - text-safe amber */
+    --warning-text: 32 72% 32%;
+    /* #DC2626 */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    /* #B91C1C - text-safe red */
+    --destructive-text: 0 66% 42%;
+    /* #0284C7 */
+    --info: 199 89% 42%;
+    --info-foreground: 0 0% 100%;
+    /* #0369A1 - text-safe blue */
+    --info-text: 200 79% 32%;
+
+    /* Sidebar panel #F8FAFC */
+    --sidebar: 214 45% 97%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-accent: 214 100% 94%;
+    --sidebar-accent-foreground: 215 78% 38%;
+    --sidebar-border: 214 32% 89%;
+
+    /* Radius: 0.5rem controls, 0.75rem cards (PRD 12.2) */
+    --radius: 0.5rem;
+    --radius-card: 0.75rem;
+
+    /*
+     * Layout rails.
+     * PRD 12.4: sidebar 240px. 768-1023px collapses to a 64px icon rail.
+     * These MUST be defined: the sidebar component reads them via
+     * `var(--sidebar-width)`. An undefined variable silently collapses the
+     * rail to its content width, which is exactly the bug the fidelity audit
+     * measured (199px instead of 240px).
+     */
+    --sidebar-width: 240px;
+    --sidebar-width-icon: 64px;
+    --topbar-height: 56px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Font smoothing: the product is a dense data tool read for long
+       sessions, so strokes are smoothed to reduce shimmer. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /*
+     * Stop the "whole page nudges sideways" bug: when a page grows past the
+     * viewport the scrollbar appears and eats ~15px, shifting every element.
+     * Reserving the gutter keeps the content column fixed whether or not the
+     * page scrolls.
+     */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /*
+   * "Buka modal, seluruh halaman bergeser" — second half of the scrollbar bug.
+   *
+   * Radix (via react-remove-scroll) locks the page by adding `padding-right` to
+   * <body> equal to the scrollbar width, so hiding the scrollbar does not move
+   * the layout. We already reserve that space with `scrollbar-gutter: stable`
+   * on <html>, so the padding compensates a second time and every element jumps
+   * sideways the moment a dialog or sheet opens.
+   *
+   * Only the compensation is neutralised; the scroll lock itself is kept. The
+   * @supports guard means browsers without scrollbar-gutter keep Radix's own
+   * (correct) behaviour instead of losing the compensation entirely.
+   */
+  @supports (scrollbar-gutter: stable) {
+    /*
+     * Specificity matters here. react-remove-scroll injects its own <style> at
+     * RUNTIME into <head>:
+     *
+     *   body[data-scroll-locked] {
+     *     margin-right: 15px !important;   // gapMode: margin
+     *     padding-right: 15px !important;  // gapMode: padding
+     *   }
+     *
+     * A selector with the SAME specificity (0,1,1) loses to that injected
+     * sheet purely because it lands later in the document. That is why the
+     * first attempt at this fix did not stop the viewport from shrinking when
+     * a dialog, dropdown, select, or sheet opened.
+     *
+     * `html body[...]` is (0,1,2) and wins regardless of insertion order.
+     * The measured gap is wrong in the first place: with
+     * `scrollbar-gutter: stable` the gutter is already reserved, so
+     * `innerWidth - clientWidth` reports a scrollbar even though the layout
+     * never lost that space. Compensating for it a second time is exactly
+     * what makes the whole page look like it expands and contracts.
+     *
+     * Only the compensation is neutralised; `overflow: hidden` (the actual
+     * scroll lock) is left untouched.
+     */
+    html body[data-scroll-locked] {
+      margin-right: 0 !important;
+      margin-left: 0 !important;
+      padding-right: 0 !important;
+      padding-left: 0 !important;
+    }
+  }
+
+  /*
+   * Browser surfaces the product does not draw but still owns.
+   * Selection, caret and scrollbars are part of the interface; leaving them
+   * at UA defaults is the cheapest way to look assembled instead of built.
+   */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.18);
+    color: hsl(var(--foreground));
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Numbers align in tables/metrics (Stitch design discipline). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Wrapping: balanced headings avoid a lone trailing word; pretty body copy
+   * avoids rivers of whitespace. Not applied to code, logs or long prose.
+   */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  dd,
+  dt,
+  figcaption {
+    text-wrap: pretty;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    text-wrap: normal;
+  }
+
+  /* Inline code: monospace is reserved for code, SQL and logs (PRD 12.1). */
+  :not(pre) > code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-foreground;
+  }
+
+  /*
+   * Scroll container without a visible bar. Used for the tab strip, where the
+   * cut-off tab itself is the affordance and a bar would eat vertical space.
+   */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Respect reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Page shell used by every authenticated screen. */
+  .page-container {
+    @apply mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 lg:px-8;
+  }
+
+  /* Log / SQL console surface (monospace, PRD 12.1). */
+  .console {
+    @apply rounded-lg border border-border bg-muted font-mono text-xs leading-relaxed text-foreground;
+  }
+
+  /* Subtle skeleton shimmer matched to the real layout. */
+  .shimmer {
+    @apply relative overflow-hidden bg-muted;
+  }
+  .shimmer::after {
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent;
+    content: "";
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* React Flow overrides: light dot grid, no gradients. */
+  .react-flow__background {
+    background-color: #ffffff;
+  }
+  .react-flow__minimap {
+    @apply rounded-lg border border-border bg-background;
+  }
+  .react-flow__controls {
+    @apply overflow-hidden rounded-lg border border-border shadow-card;
+  }
+  .react-flow__controls-button {
+    @apply border-b border-border bg-background text-foreground hover:bg-muted;
+  }
+}

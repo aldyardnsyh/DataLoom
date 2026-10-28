@@ -1,0 +1,36 @@
+﻿# --- API image -------------------------------------------------------------
+# Build context is the REPOSITORY ROOT (see infra/docker-compose.yml) because the
+# API depends on packages/contracts via a relative path.
+FROM python:3.11-slim-bookworm AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Build tools are only needed while installing wheels; removed afterwards.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1. Contracts first: they change least often, so this layer caches well.
+COPY packages/contracts /app/packages/contracts
+
+# 2. API sources.
+COPY apps/api /app/apps/api
+
+WORKDIR /app/apps/api
+RUN pip install --no-cache-dir -e /app/packages/contracts \
+    && pip install --no-cache-dir -e .
+
+# Run as a non-root user (defence in depth; the API never needs root).
+RUN useradd --create-home --uid 10001 dataloom \
+    && chown -R dataloom:dataloom /app
+USER dataloom
+
+EXPOSE 8000
+
+# Two uvicorn workers for the API process; uvloop/http tools keep the loop fast.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+

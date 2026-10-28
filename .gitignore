@@ -1,0 +1,35 @@
+﻿# dependencies
+node_modules/
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# test and QA artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+qa-artifacts/
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

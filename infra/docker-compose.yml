@@ -1,0 +1,143 @@
+﻿services:
+  # ---------------------------------------------------------------------------
+  # Postgres is external in this deployment (Neon, Supabase, or RDS).
+  # It is included here only for local development via the "local-db" profile so
+  # that `docker compose --profile local-db up` works without any cloud account.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16.4-alpine
+    profiles: ["local-db"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dataloom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+      POSTGRES_DB: ${POSTGRES_DB:-dataloom}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dataloom}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+
+  redis:
+    image: redis:7.4-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory ${REDIS_MAXMEMORY:-150mb}
+      --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 200m
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: ${API_MEM_LIMIT:-256m}
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - duckdb:/data/duckdb
+    mem_limit: ${WORKER_MEM_LIMIT:-500m}
+
+  # Optional profile for agent workloads. Run it separately from the pipeline
+  # worker on memory-constrained deployments.
+  agents:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.agents
+    profiles: ["agents"]
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      CHECKPOINT_DATABASE_URL: ${CHECKPOINT_DATABASE_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - duckdb:/data/duckdb:ro
+    mem_limit: ${AGENTS_MEM_LIMIT:-300m}
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/v1}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    mem_limit: ${WEB_MEM_LIMIT:-256m}
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - web
+      - api
+    mem_limit: 64m
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["observability"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    mem_limit: 192m
+
+volumes:
+  pgdata:
+  redisdata:
+  duckdb:
+  caddydata:
+  caddyconfig:
+
