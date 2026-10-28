@@ -137,6 +137,7 @@ Perilaku:
 | Keyboard | Fokus terlihat, dialog bisa ditutup Escape | komponen Radix, `confirm-dialog.tsx` |
 | Responsif | Sidebar rail dan sheet, tabel bisa digeser di dalam kontainer | `sidebar.tsx`, `data-table.tsx` |
 | Bahasa | Indonesia, teks terpusat di `lib/i18n/id.ts` | `id.ts` |
+| E2E regression | Playwright library + Node test, dijalankan lewat app runner global | `apps/web/e2e/demo.e2e.mjs`, `npm run test:e2e` |
 
 ## Non-tujuan
 
