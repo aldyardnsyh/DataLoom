@@ -34,6 +34,9 @@ let consoleErrors = [];
 async function goto(pathname) {
   await page.goto(`${BASE_URL}${pathname}`, { waitUntil: "domcontentloaded" });
   await page.locator("main, h1").first().waitFor({ state: "visible" });
+  // Demo queries resolve in ~60ms and the demo banner is set in an effect.
+  // Wait for that paint so assertions do not race the first hydration pass.
+  await page.waitForTimeout(250);
 }
 
 async function shot(name) {
@@ -83,6 +86,7 @@ test("landing explains the quality gate without overflow", async () => {
 
 test("shell shows one demo label and collapses to a 64px rail", async () => {
   await goto("/dashboard?mode=demo");
+  await page.getByText("Mode demo", { exact: true }).first().waitFor({ state: "visible" });
   assert.equal(demoLabelCount(await page.locator("body").innerText()), 1);
 
   await page.getByRole("button", { name: "Ciutkan menu navigasi" }).click();
@@ -101,6 +105,10 @@ test("shell shows one demo label and collapses to a 64px rail", async () => {
 
 test("quarantine tab exposes rejected rows, run ledger, and gate", async () => {
   await goto("/data?mode=demo");
+  await page
+    .getByText("quarantine_orders", { exact: true })
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
   await page.getByText("quarantine_orders", { exact: true }).first().click();
   await page.getByText("Run yang menolak baris").waitFor({ state: "visible" });
 
@@ -111,6 +119,29 @@ test("quarantine tab exposes rejected rows, run ledger, and gate", async () => {
   assert.match(body, /_reason_code|not_null|unique/);
   await assertNoOverflow();
   await shot("e2e-03-quarantine");
+  assert.deepEqual(consoleErrors, []);
+});
+
+test("running a pipeline produces a completed timeline and gate", async () => {
+  await goto("/pipelines/pl-1?mode=demo");
+  const runButton = page.getByRole("button", { name: "Jalankan", exact: true });
+  await runButton.waitFor({ state: "visible", timeout: 15_000 });
+  await page.waitForFunction(
+    () => {
+      const buttons = [...document.querySelectorAll("button")];
+      const target = buttons.find((button) => button.textContent?.trim() === "Jalankan");
+      return Boolean(target && !target.disabled);
+    },
+    { timeout: 15_000 },
+  );
+  await runButton.click();
+  await page.waitForURL(/\/runs\/run-/, { timeout: 10_000 });
+  await page.locator("main").waitFor({ state: "visible" });
+  await page.getByText("Daftar periksa gerbang").waitFor({ state: "visible", timeout: 15_000 });
+  const body = await page.locator("body").innerText();
+  assert.match(body, /Berhasil|Lulus/);
+  assert.match(body, /Daftar periksa gerbang/);
+  await shot("e2e-05-run-completed");
   assert.deepEqual(consoleErrors, []);
 });
 
