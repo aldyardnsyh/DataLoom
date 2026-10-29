@@ -1,4 +1,4 @@
-﻿# --- Worker image ----------------------------------------------------------
+# --- Worker image ----------------------------------------------------------
 FROM python:3.11-slim-bookworm AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

@@ -1,4 +1,4 @@
-﻿"""Data Explorer API (FR-041): datasets, preview, quality, lineage (FR-027).
+"""Data Explorer API (FR-041): datasets, preview, quality, lineage (FR-027).
 
 Preview is capped at ``MAX_PREVIEW_ROWS`` = 1.000 by contract. The response marks
 ``truncated`` so the UI can show the banner without guessing.
@@ -81,16 +81,7 @@ async def preview_dataset(
 # Gold lives in DuckDB. Bronze, Silver, and Quarantine are Parquet objects.
     # Both paths are bounded and scoped to the project's org, but they read from
     # different engines.
-    if dataset.layer != Layer.GOLD.value:
-        if not dataset.storage_uri:
-            return DatasetPreview(
-                dataset_id=dataset.id,
-                layer=Layer(dataset.layer),
-                columns=columns,
-                rows=[],
-                total_rows=int(dataset.row_count or 0),
-                truncated=False,
-            )
+    if dataset.storage_uri:
 
         try:
             preview = await query_service.preview_parquet(

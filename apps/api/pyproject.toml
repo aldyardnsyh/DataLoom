@@ -17,7 +17,7 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.43",
     "asyncpg==0.30.0",
     "alembic==1.16.4",
-    "redis==5.4.1",
+    "redis==5.2.1",
     "argon2-cffi==25.1.0",
     "cryptography==46.0.1",
     "boto3==1.39.10",
@@ -49,3 +49,4 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
+

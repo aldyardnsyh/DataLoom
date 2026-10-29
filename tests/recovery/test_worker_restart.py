@@ -1,4 +1,4 @@
-﻿"""Worker restart resilience (FR-037 / NFR-08).
+"""Worker restart resilience (FR-037 / NFR-08).
 
 The invariant: a message is ACKed **only after** the Bronze object is durably
 written. A crash between the two means redelivery, never data loss; a duplicate

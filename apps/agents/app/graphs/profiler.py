@@ -1,4 +1,4 @@
-﻿"""Schema Profiler graph (PRD A1) - the core Phase 3 deliverable.
+"""Schema Profiler graph (PRD A1) - the core Phase 3 deliverable.
 
 Graph (PRD A1, exact order)::
 

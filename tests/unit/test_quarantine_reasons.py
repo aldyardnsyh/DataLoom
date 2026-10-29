@@ -1,4 +1,4 @@
-﻿"""Quarantine must keep the specific rule code, not overwrite it."""
+"""Quarantine must keep the specific rule code, not overwrite it."""
 
 from __future__ import annotations
 

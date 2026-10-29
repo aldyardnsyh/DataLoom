@@ -1,4 +1,4 @@
-﻿"""Budget guard (FR-035) â€” pure logic with the shared ``FakeSession``.
+"""Budget guard (FR-035) â€” pure logic with the shared ``FakeSession``.
 
 ``BudgetGuard`` reads:
 - the org row (monthly budget + per-run token limit) via ``execute(...).first()``

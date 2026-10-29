@@ -1,4 +1,4 @@
-﻿"""Agent routes: start runs, read proposals, decide, apply (FR-030..037).
+"""Agent routes: start runs, read proposals, decide, apply (FR-030..037).
 
 Approval is the only way a proposal becomes effective (FR-031):
 ``POST /v1/proposals/{id}/decision`` writes the decision + audit row, and

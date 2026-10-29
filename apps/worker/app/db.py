@@ -21,6 +21,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -35,6 +36,52 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
         PgUUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
 
+# ---------------------------------------------------------------------------
+# Native Postgres ENUMs. The migration owns CREATE TYPE; these objects only
+# tell SQLAlchemy (and asyncpg) that the column is an enum, not a varchar.
+# Without them a comparison such as ``runs.status = 'queued'`` is sent as a
+# character varying and Postgres refuses the operator.
+# ---------------------------------------------------------------------------
+layer_enum = PgEnum(
+    "bronze", "silver", "gold", "quarantine", name="layer", create_type=False
+)
+run_status_enum = PgEnum(
+    "draft",
+    "validated",
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "retrying",
+    "needs_attention",
+    "cancelled",
+    name="run_status",
+    create_type=False,
+)
+run_trigger_enum = PgEnum(
+    "manual",
+    "schedule",
+    "webhook",
+    "retry",
+    "self_heal",
+    name="run_trigger",
+    create_type=False,
+)
+node_status_enum = PgEnum(
+    "pending",
+    "running",
+    "succeeded",
+    "failed",
+    "skipped",
+    "retrying",
+    "cancelled",
+    name="node_status",
+    create_type=False,
+)
+validation_status_enum = PgEnum(
+    "draft", "valid", "invalid", name="validation_status", create_type=False
+)
+
 
 class Dataset(Base):
     __tablename__ = "datasets"
@@ -43,7 +90,7 @@ class Dataset(Base):
     org_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     project_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     source_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True))
-    layer: Mapped[str] = mapped_column(String(16), nullable=False)
+    layer: Mapped[str] = mapped_column(layer_enum, nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     schema_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
@@ -92,7 +139,9 @@ class PipelineVersion(Base):
     pipeline_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     dag_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    validation_status: Mapped[str] = mapped_column(String(16), nullable=False, default="valid")
+    validation_status: Mapped[str] = mapped_column(
+        validation_status_enum, nullable=False, default="valid"
+    )
     validation_errors: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list
     )
@@ -108,8 +157,8 @@ class Run(Base):
     pipeline_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     pipeline_version_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    trigger: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
-    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued")
+    trigger: Mapped[str] = mapped_column(run_trigger_enum, nullable=False, default="manual")
+    status: Mapped[str] = mapped_column(run_status_enum, nullable=False, default="queued")
     triggered_by_user_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True))
     current_node_id: Mapped[str | None] = mapped_column(String(64))
     queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -135,7 +184,7 @@ class RunNode(Base):
     run_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     node_id: Mapped[str] = mapped_column(String(64), nullable=False)
     node_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    status: Mapped[str] = mapped_column(node_status_enum, nullable=False, default="pending")
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

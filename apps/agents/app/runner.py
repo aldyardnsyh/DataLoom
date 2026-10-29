@@ -1,4 +1,4 @@
-﻿"""Agent runner: builds the graph, runs it, and manages ``agent_runs`` rows.
+"""Agent runner: builds the graph, runs it, and manages ``agent_runs`` rows.
 
 Public API used by the FastAPI backend:
 

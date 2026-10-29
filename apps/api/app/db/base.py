@@ -14,7 +14,7 @@ Tenancy convention (see ADR-004):
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, MetaData, func, text
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -80,15 +80,26 @@ class OrgScopedMixin:
 
 
 class TimestampMixin:
-    """``created_at`` / ``updated_at`` as TIMESTAMPTZ with server defaults."""
+    """``created_at`` / ``updated_at`` as TIMESTAMPTZ.
+
+    The values are computed in Python AND kept as server defaults. The Python
+    side matters: a server-side ``onupdate`` leaves the attribute expired after
+    an UPDATE, and reading it later triggers a lazy load outside the async
+    greenlet, which raises ``MissingGreenlet``. The server default stays for
+    rows written by raw SQL.
+    """
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        onupdate=lambda: datetime.now(tz=timezone.utc),
         server_default=func.now(),
-        onupdate=func.now(),
         nullable=False,
     )
 
@@ -97,7 +108,10 @@ class CreatedAtMixin:
     """``created_at`` only, for append-only tables (logs, events)."""
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        server_default=func.now(),
+        nullable=False,
     )
 
 

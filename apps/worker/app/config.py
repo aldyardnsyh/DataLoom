@@ -32,6 +32,11 @@ class WorkerSettings(BaseSettings):
     MAX_ROWS_PER_BATCH: int = 5000
 
     # --- object storage ----------------------------------------------------
+    #: ``s3`` talks to R2/S3/MinIO. ``local`` writes plain files under
+    #: ``LOCAL_STORAGE_ROOT`` and exists for development only, so the whole
+    #: stack can run without a cloud account.
+    DATASET_STORAGE: str = "s3"
+    LOCAL_STORAGE_ROOT: str = "./.local-storage"
     S3_ENDPOINT_URL: str = ""
     S3_BUCKET: str = "dataloom-dev"
     S3_REGION: str = "auto"

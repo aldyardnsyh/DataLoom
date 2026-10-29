@@ -1,4 +1,4 @@
-﻿"""Shared pytest fixtures for the DataLoom test suite.
+"""Shared pytest fixtures for the DataLoom test suite.
 
 Assertions are written to be falsifiable: each one fails when the behaviour it
 describes is wrong.

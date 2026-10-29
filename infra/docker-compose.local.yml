@@ -1,0 +1,49 @@
+# Local development stack: Postgres and Redis only.
+#
+# Object storage is the filesystem backend (DATASET_STORAGE=local), so no
+# cloud account and no S3-compatible container is needed on a laptop.
+#
+#   docker compose -f infra/docker-compose.local.yml up -d
+#
+# Ports differ from the production compose on purpose so a local DataLoom
+# never collides with another Postgres on the same machine.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dataloom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataloom}
+      POSTGRES_DB: ${POSTGRES_DB:-dataloom}
+    ports:
+      - "55434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dataloom}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+
+  redis:
+    image: redis:7.4-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory ${REDIS_MAXMEMORY:-150mb}
+      --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 200m
+
+volumes:
+  pgdata:
+  redisdata:

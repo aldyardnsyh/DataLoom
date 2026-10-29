@@ -1,4 +1,4 @@
-﻿/** @type {import("next").NextConfig} */
+/** @type {import("next").NextConfig} */
 const nextConfig = {
   // React StrictMode double-invokes effects in development. With
   // @xyflow/react 12.8 the drag handlers are attached in an effect whose

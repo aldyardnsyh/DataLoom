@@ -1,4 +1,4 @@
-﻿"""Self-Healing graph (PRD A4, P1).
+"""Self-Healing graph (PRD A4, P1).
 
 Flow (PRD A4, exact)::
 

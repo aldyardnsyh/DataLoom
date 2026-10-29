@@ -1,4 +1,4 @@
-﻿"""Integration: the ingest hot path status matrix (FR-010..012, FR-016).
+"""Integration: the ingest hot path status matrix (FR-010..012, FR-016).
 
 The ORDER of checks is part of the contract (PRD 9.4): a larger request must be
 rejected before a bad key is even looked at, so the expensive work never runs.

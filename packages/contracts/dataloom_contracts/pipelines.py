@@ -1,4 +1,4 @@
-﻿"""THE TYPED DAG CONTRACT (FR-020, FR-024, FR-032).
+"""THE TYPED DAG CONTRACT (FR-020, FR-024, FR-032).
 
 Every consumer codes against these types:
 - Backend: validates ``PipelineDAG`` on create/update, stores it in

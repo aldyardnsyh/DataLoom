@@ -1,4 +1,4 @@
-﻿"""Application settings.
+"""Application settings.
 
 Every value comes from the environment (or `.env`). No secret has a usable
 default: the defaults are obvious placeholders so a misconfigured deployment
@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     UPLOAD_MAX_BYTES: int = 524_288_000  # 500 MB (FR-013)
 
     # --- object storage (S3 compatible: R2 / S3 / MinIO) -------------------
+    #: ``s3`` talks to R2/S3/MinIO. ``local`` reads plain files under
+    #: ``LOCAL_STORAGE_ROOT`` and exists for development only, so the whole
+    #: stack can run without a cloud account.
+    DATASET_STORAGE: str = "s3"
+    LOCAL_STORAGE_ROOT: str = "./.local-storage"
     S3_ENDPOINT_URL: str = ""  # empty -> AWS default endpoint
     S3_BUCKET: str = "dataloom-dev"
     S3_REGION: str = "auto"

@@ -1,4 +1,4 @@
-﻿# dependencies
+# dependencies
 node_modules/
 
 # builds
@@ -33,3 +33,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+# local development storage (datasets, duckdb warehouse)
+.local-storage/

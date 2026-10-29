@@ -1,4 +1,4 @@
-﻿"""The run state machine.
+"""The run state machine.
 
 The legal transitions are fixed::
 

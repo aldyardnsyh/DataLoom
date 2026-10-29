@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, Check, Loader2, Sparkles, X } from "lucide-react";

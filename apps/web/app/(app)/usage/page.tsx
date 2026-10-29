@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, DollarSign, Hash, Timer } from "lucide-react";

@@ -1,4 +1,4 @@
-﻿# --- Agent worker image ----------------------------------------------------
+# --- Agent worker image ----------------------------------------------------
 FROM python:3.11-slim-bookworm AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

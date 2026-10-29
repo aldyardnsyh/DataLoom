@@ -1,4 +1,4 @@
-﻿"""Parquet preview is bounded, org-scoped, and returns rows not fabricated data."""
+"""Parquet preview is bounded, org-scoped, and returns rows not fabricated data."""
 
 from __future__ import annotations
 

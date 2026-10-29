@@ -10,6 +10,7 @@ Gold is an aggregate of Silver written to DuckDB. Two invariants:
 
 from __future__ import annotations
 
+import io
 import json
 import math
 import os
@@ -101,7 +102,12 @@ def build_aggregate_sql(
         # every other identifier here.
         selects.append(f"{template.format(col=col_sql)} AS {_quote(str(metric['alias']))}")
     if not selects:
-        raise ValueError("Agregasi butuh minimal satu metrik.")
+        # A sink with no group_by and no metrics is a passthrough copy of
+        # Silver. A minimal pipeline (source -> validate -> sink) is valid and
+        # must not be rejected; only a group_by without metrics is ambiguous.
+        if group_by:
+            raise ValueError("Agregasi dengan group_by butuh minimal satu metrik.")
+        return f"SELECT * FROM {_quote(table)}"
 
     group_sql = ", ".join(_quote(c) for c in group_by)
     sql = f"SELECT {', '.join(selects)} FROM {_quote(table)}"
@@ -265,7 +271,9 @@ def export_gold_parquet(
         con.close()
     pl_frame = pl.from_arrow(frame)
     key = f"org/{org_id}/gold/{dataset_name}.parquet"
-    storage.put_bytes(key, pl_frame.write_parquet(), "application/vnd.apache.parquet")
+    buffer = io.BytesIO()
+    pl_frame.write_parquet(buffer, compression="zstd")
+    storage.put_bytes(key, buffer.getvalue(), "application/vnd.apache.parquet")
     return storage.uri_for(key), pl_frame.height
 
 

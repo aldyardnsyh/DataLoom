@@ -1,4 +1,4 @@
-﻿"""Usage, budget and audit API (FR-035, FR-036, FR-042, FR-043).
+"""Usage, budget and audit API (FR-035, FR-036, FR-042, FR-043).
 
 Every number is an aggregate over ``llm_calls`` / ``audit_logs`` / Redis. When
 there is no data the aggregate is ``0`` and latency is ``null`` â€” never a

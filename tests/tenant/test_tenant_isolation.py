@@ -1,4 +1,4 @@
-﻿"""Cross-tenant isolation (FR-003, NFR-07).
+"""Cross-tenant isolation (FR-003, NFR-07).
 
 The single invariant under test: **a resource owned by org B must never be
 reachable by a member of org A**. The API returns 404 (not 403) so it does not

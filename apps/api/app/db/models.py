@@ -24,7 +24,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -36,6 +35,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -46,7 +46,7 @@ from .base import Base, CreatedAtMixin, OrgScopedMixin, TimestampMixin, uuid_fk,
 # Native Postgres ENUMs. ``name=`` MUST match the migration exactly.
 # ``create_type=False`` because the migration owns CREATE TYPE.
 # ---------------------------------------------------------------------------
-role_enum = Enum(
+role_enum = PgEnum(
     "owner",
     "admin",
     "editor",
@@ -54,13 +54,13 @@ role_enum = Enum(
     name="role",
     create_type=False,
 )
-source_type_enum = Enum(
+source_type_enum = PgEnum(
     "webhook", "csv", "api", "postgres", name="source_type", create_type=False
 )
-layer_enum = Enum(
+layer_enum = PgEnum(
     "bronze", "silver", "gold", "quarantine", name="layer", create_type=False
 )
-run_status_enum = Enum(
+run_status_enum = PgEnum(
     "draft",
     "validated",
     "queued",
@@ -73,7 +73,7 @@ run_status_enum = Enum(
     name="run_status",
     create_type=False,
 )
-node_status_enum = Enum(
+node_status_enum = PgEnum(
     "pending",
     "running",
     "succeeded",
@@ -84,7 +84,7 @@ node_status_enum = Enum(
     name="node_status",
     create_type=False,
 )
-proposal_status_enum = Enum(
+proposal_status_enum = PgEnum(
     "pending",
     "approved",
     "rejected",
@@ -93,7 +93,7 @@ proposal_status_enum = Enum(
     name="proposal_status",
     create_type=False,
 )
-agent_type_enum = Enum(
+agent_type_enum = PgEnum(
     "supervisor",
     "schema_profiler",
     "pipeline_builder",
@@ -103,7 +103,7 @@ agent_type_enum = Enum(
     name="agent_type",
     create_type=False,
 )
-agent_run_status_enum = Enum(
+agent_run_status_enum = PgEnum(
     "pending",
     "running",
     "waiting_approval",
@@ -115,14 +115,14 @@ agent_run_status_enum = Enum(
     name="agent_run_status",
     create_type=False,
 )
-validation_status_enum = Enum(
+validation_status_enum = PgEnum(
     "draft", "valid", "invalid", name="validation_status", create_type=False
 )
-risk_level_enum = Enum(
+risk_level_enum = PgEnum(
     "low", "medium", "destructive", name="risk_level", create_type=False
 )
-actor_kind_enum = Enum("user", "agent", "system", name="actor_kind", create_type=False)
-run_trigger_enum = Enum(
+actor_kind_enum = PgEnum("user", "agent", "system", name="actor_kind", create_type=False)
+run_trigger_enum = PgEnum(
     "manual",
     "schedule",
     "webhook",
@@ -131,7 +131,7 @@ run_trigger_enum = Enum(
     name="run_trigger",
     create_type=False,
 )
-upload_status_enum = Enum(
+upload_status_enum = PgEnum(
     "initiated",
     "completed",
     "failed",
@@ -139,7 +139,7 @@ upload_status_enum = Enum(
     name="upload_status",
     create_type=False,
 )
-proposal_kind_enum = Enum(
+proposal_kind_enum = PgEnum(
     "cleaning_rules",
     "pipeline_draft",
     "fix_proposal",

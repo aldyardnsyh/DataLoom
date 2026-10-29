@@ -1,4 +1,4 @@
-﻿# --- API image -------------------------------------------------------------
+# --- API image -------------------------------------------------------------
 # Build context is the REPOSITORY ROOT (see infra/docker-compose.yml) because the
 # API depends on packages/contracts via a relative path.
 FROM python:3.11-slim-bookworm AS base

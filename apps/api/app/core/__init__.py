@@ -1,1 +1,1 @@
-﻿"""Cross-cutting concerns: errors, RBAC, rate limiting, metrics, SSE."""
+"""Cross-cutting concerns: errors, RBAC, rate limiting, metrics, SSE."""

@@ -26,6 +26,8 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset(
         (RunStatus.QUEUED.value, RunStatus.CANCELLED.value),
         (RunStatus.RUNNING.value, RunStatus.SUCCEEDED.value),
         (RunStatus.RUNNING.value, RunStatus.FAILED.value),
+        # A run can be halted by the quality gate without a node crash.
+        (RunStatus.RUNNING.value, RunStatus.NEEDS_ATTENTION.value),
         (RunStatus.RUNNING.value, RunStatus.CANCELLED.value),
         (RunStatus.FAILED.value, RunStatus.RETRYING.value),
         # retry exhausted -> needs a human

@@ -1,4 +1,4 @@
-﻿"""Deterministic column statistics for the Schema Profiler (PRD A1 input).
+"""Deterministic column statistics for the Schema Profiler (PRD A1 input).
 
 **No LLM touches this module.** Every number the profiler prompt shows is
 computed here from a Polars frame, so a hallucinated statistic cannot enter a

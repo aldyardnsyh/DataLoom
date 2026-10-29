@@ -252,11 +252,15 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
     order = dag.topological_order()
     nodes = dag.node_map()
 
-    try:
-        await transition(session, run_id, RunStatus.RUNNING)
-    except TransitionError:
-        return run.status
-    await session.commit()
+    # The run loop may already have claimed this run (queued -> running) before
+    # handing it over. Only transition when it is still queued, otherwise the
+    # second transition is an illegal running -> running edge.
+    if run.status != RunStatus.RUNNING.value:
+        try:
+            await transition(session, run_id, RunStatus.RUNNING)
+        except TransitionError:
+            return run.status
+        await session.commit()
 
     outputs: dict[str, pl.DataFrame] = {}
     total_in = 0
@@ -264,6 +268,7 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
     total_quarantined = 0
     quarantine_reasons: dict[str, int] = {}
     reconciliation: dict[str, Any] | None = None
+    gold_export: dict[str, Any] | None = None
     schema_valid = True
     schema_errors: list[str] = []
 
@@ -309,6 +314,13 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
                     reconciliation = extra["reconciliation"]
                 if extra.get("dataset_name"):
                     outputs[f"{node_id}::gold"] = pl.DataFrame({"_gold": [extra["dataset_name"]]})
+                if extra.get("gold_export_uri") is not None:
+                    gold_export = {
+                        "name": extra["dataset_name"],
+                        "uri": extra["gold_export_uri"],
+                        "columns": extra.get("gold_columns") or [],
+                        "rows": int(extra.get("gold_rows") or 0),
+                    }
 
                 duration = int((time.monotonic() - started) * 1000)
                 outcome = NodeOutcome(
@@ -372,7 +384,12 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
             }
 
         total_in = max(total_in, outcome.rows_in)
-        total_out = max(total_out, outcome.rows_out)
+        # ``rows_out`` is what reached the sink. Using max() across nodes would
+        # report the source batch size (6) instead of the promoted rows (5).
+        if node.type.value == "sink":
+            total_out = outcome.rows_out
+        elif total_out == 0:
+            total_out = max(total_out, outcome.rows_out)
         total_quarantined += outcome.rows_quarantined
 
         await session.commit()
@@ -418,6 +435,18 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
     run.rows_in = total_in
     run.rows_out = total_out
     run.rows_quarantined = total_quarantined
+
+    if gate.passed and gold_export and gold_export["uri"]:
+        await register_dataset(
+            session,
+            org_id=run.org_id,
+            project_id=run.project_id,
+            layer="gold",
+            name=gold_export["name"],
+            storage_uri=gold_export["uri"],
+            row_count=gold_export["rows"],
+            columns=gold_export["columns"],
+        )
 
     if gate.passed:
         await transition(session, run_id, RunStatus.SUCCEEDED)
@@ -550,16 +579,18 @@ async def _dispatch(
                 run.id,
             )
 
-        await register_dataset(
-            session,
-            org_id=run.org_id,
-            project_id=run.project_id,
-            layer="gold",
-            name=result.dataset_name,
-            storage_uri=export_uri,
-            row_count=result.rows_out,
-            columns=result.columns,
+        return (
+            frame_in,
+            [],
+            {},
+            {
+                "reconciliation": result.reconciliation,
+                "dataset_name": result.dataset_name,
+                # Deferred: a Gold row is registered only if the gate passes.
+                "gold_export_uri": export_uri,
+                "gold_columns": result.columns,
+                "gold_rows": result.rows_out,
+            },
         )
-        return frame_in, [], {}, {"reconciliation": result.reconciliation, "dataset_name": result.dataset_name}
 
     raise ValueError(f"Tipe node tidak dikenal: {node_type}")

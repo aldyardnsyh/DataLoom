@@ -1,4 +1,4 @@
-﻿# DataLoom
+# DataLoom
 
 Ruang kerja operator data untuk membangun, menjalankan, dan memantau pipeline
 end-to-end. Data mentah masuk, dibersihkan secara deterministik, diperiksa

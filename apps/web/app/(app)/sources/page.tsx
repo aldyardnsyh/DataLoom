@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMutation } from "@tanstack/react-query";
 import { CloudUpload, Database, FileText, Globe, Layers, Plus, RotateCw, ShieldAlert } from "lucide-react";

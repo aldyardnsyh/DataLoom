@@ -1,4 +1,4 @@
-﻿"""Pipeline Builder graph (PRD A2) - Phase 4 completes the UI wiring.
+"""Pipeline Builder graph (PRD A2) - Phase 4 completes the UI wiring.
 
 Flow (PRD A2, exact)::
 

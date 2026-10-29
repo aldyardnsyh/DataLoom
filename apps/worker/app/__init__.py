@@ -1,1 +1,1 @@
-﻿"""DataLoom worker package."""
+"""DataLoom worker package."""

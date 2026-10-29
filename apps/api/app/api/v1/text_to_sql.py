@@ -1,4 +1,4 @@
-﻿"""Text-to-SQL endpoint (FR-033, PRD A5).
+"""Text-to-SQL endpoint (FR-033, PRD A5).
 
 The request path is fully synchronous with respect to safety:
 

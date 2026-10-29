@@ -1,4 +1,4 @@
-﻿"""Pipeline routes (FR-020, FR-024, FR-027, FR-028)."""
+"""Pipeline routes (FR-020, FR-024, FR-027, FR-028)."""
 
 from __future__ import annotations
 

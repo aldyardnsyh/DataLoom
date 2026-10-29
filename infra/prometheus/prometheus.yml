@@ -1,4 +1,4 @@
-﻿# Prometheus scrape config for the observability profile (FR-042).
+# Prometheus scrape config for the observability profile (FR-042).
 # Only real endpoints are scraped; nothing is generated.
 global:
   scrape_interval: 15s

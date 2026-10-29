@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import logging
 import signal
+import uuid
 from collections.abc import AsyncIterator
 
 import redis.asyncio as aioredis
@@ -98,9 +99,18 @@ async def consume_loop(redis: aioredis.Redis, factory: async_sessionmaker[AsyncS
 
 
 async def run_loop(factory: async_sessionmaker[AsyncSession]) -> None:
-    """Pick up queued runs one at a time (respects per-org concurrency later)."""
+    """Claim one queued run, release the lock, then execute it.
+
+    The claim MUST commit before ``execute_run`` opens its own session. Holding
+    the ``FOR UPDATE`` lock while a second session tries to lock the same row
+    deadlocks the worker against itself.
+    """
+    from app.transition import TransitionError, transition
+    from dataloom_contracts._base import RunStatus
+
     while not _STOP.is_set():
         try:
+            run_id: uuid.UUID | None = None
             async with factory() as session:
                 run = (
                     await session.execute(
@@ -112,15 +122,24 @@ async def run_loop(factory: async_sessionmaker[AsyncSession]) -> None:
                     )
                 ).scalar_one_or_none()
 
-                if run is None:
-                    await asyncio.sleep(1)
-                    continue
+                if run is not None:
+                    run_id = run.id
+                    try:
+                        await transition(session, run_id, RunStatus.RUNNING)
+                    except TransitionError:
+                        run_id = None
+                # Commit (or roll back) the claim so the row lock is released
+                # before execute_run locks it again in a fresh session.
+                await session.commit()
 
-                run_id = run.id
-                logger.info("Menjalankan run %s", run_id)
-                async with factory() as run_session:
-                    status = await execute_run(run_session, run_id)
-                logger.info("Run %s selesai dengan status %s", run_id, status)
+            if run_id is None:
+                await asyncio.sleep(1)
+                continue
+
+            logger.info("Menjalankan run %s", run_id)
+            async with factory() as run_session:
+                status = await execute_run(run_session, run_id)
+            logger.info("Run %s selesai dengan status %s", run_id, status)
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001

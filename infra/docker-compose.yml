@@ -1,4 +1,4 @@
-﻿services:
+services:
   # ---------------------------------------------------------------------------
   # Postgres is external in this deployment (Neon, Supabase, or RDS).
   # It is included here only for local development via the "local-db" profile so

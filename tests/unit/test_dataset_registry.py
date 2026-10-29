@@ -1,4 +1,4 @@
-﻿"""Dataset registry: upsert is org/project/layer scoped and keeps real columns."""
+"""Dataset registry: upsert is org/project/layer scoped and keeps real columns."""
 
 from __future__ import annotations
 

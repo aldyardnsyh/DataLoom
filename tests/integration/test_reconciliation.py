@@ -1,4 +1,4 @@
-﻿"""Reconciliation evidence: Silver must agree with Gold (FR-023).
+"""Reconciliation evidence: Silver must agree with Gold (FR-023).
 
 Two layers are covered:
 1. ``apps/worker/app/reconcile.py`` helper maths.

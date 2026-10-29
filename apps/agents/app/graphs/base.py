@@ -1,4 +1,4 @@
-﻿"""Shared graph infrastructure (PRD 9.9, ADR-003).
+"""Shared graph infrastructure (PRD 9.9, ADR-003).
 
 Everything a graph node needs that is NOT business logic:
 
