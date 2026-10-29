@@ -104,6 +104,7 @@ tangkapan layar ada di [`docs/GALLERY.md`](docs/GALLERY.md).
 | `/` | Landing: nilai produk, alur, batas, CTA demo |
 | `/login`, `/register` | Masuk dan membuat organisasi |
 | `/dashboard` | Ringkasan run, kesehatan pipeline, approval |
+| `/setup` | Setup terpandu: proyek, sumber, API key, pipeline, run pertama |
 | `/projects` | Daftar dan pembuatan proyek |
 | `/sources` | Webhook, unggahan, REST, Postgres, API key |
 | `/pipelines` | Daftar pipeline |

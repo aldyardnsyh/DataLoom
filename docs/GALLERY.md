@@ -87,6 +87,13 @@ empat aturan gate, dan status rekonsiliasi.
 
 ![Karantina dan rekonsiliasi](screenshots/11-data-quarantine.png)
 
+### Setup terpandu
+
+Lima langkah dari akun kosong sampai run pertama, lengkap dengan endpoint ingest
+dan contoh perintah yang bisa disalin.
+
+![Setup terpandu](screenshots/28-setup.png)
+
 ### Kontrak data
 
 Kebijakan proyek, empat aturan gate, aturan validasi baris per pipeline, dan

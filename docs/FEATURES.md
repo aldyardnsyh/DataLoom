@@ -143,6 +143,7 @@ Perilaku:
 | Bahasa | Indonesia, teks terpusat di `lib/i18n/id.ts` | `id.ts` |
 | Notifikasi | Sukses, gagal, peringatan, info, dan loading punya ikon, warna, judul, deskripsi, dan durasi berbeda | `lib/notify.tsx`, `components/ui/sonner.tsx` |
 | E2E regression | Playwright library + Node test, dijalankan lewat app runner global | `apps/web/e2e/demo.e2e.mjs`, `npm run test:e2e` |
+| Setup terpandu | Lima langkah membuat proyek, sumber, API key, pipeline siap pakai, dan run pertama lewat website | `components/domain/setup-wizard.tsx`, `/setup` |
 
 ## Non-tujuan
 

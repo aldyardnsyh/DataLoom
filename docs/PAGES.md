@@ -43,6 +43,19 @@ Tujuan: menjawab "apakah hari ini ada yang perlu saya tangani?".
 Isi: KPI 24 jam, kesehatan pipeline, run terbaru, usulan yang menunggu.
 State: loading, kosong tanpa proyek, error, data parsial.
 
+### `/setup`
+
+Tujuan: membuat akun kosong menjadi ruang kerja yang berjalan, tanpa
+mengharuskan pengguna tahu urutan domain.
+
+Isi: lima langkah berurutan (proyek, sumber, API key, pipeline siap pakai, run
+pertama), endpoint ingest dan contoh perintah yang bisa disalin, tautan ke
+Penjelajah Data, Kontrak Data, dan riwayat run, lalu ringkasan konfigurasi yang
+bisa diubah dari website (ambang gerbang, approval, model AI, anggota).
+
+State: loading, kosong, error, setiap langkah sudah selesai atau belum, kunci
+API baru yang hanya ditampilkan sekali.
+
 ### `/projects`
 
 Tujuan: membuat dan memilih proyek.
