@@ -145,6 +145,22 @@ test("running a pipeline produces a completed timeline and gate", async () => {
   assert.deepEqual(consoleErrors, []);
 });
 
+test("success notification shows an icon, title, and description", async () => {
+  await goto("/projects?mode=demo");
+  await page.getByRole("button", { name: "Proyek baru", exact: true }).click();
+  await page.locator("#project-name").fill("Proyek Notifikasi");
+  await page.getByRole("button", { name: "Buat", exact: true }).click();
+
+  const toast = page.locator('[data-sonner-toast][data-type="success"]').first();
+  await toast.waitFor({ state: "visible", timeout: 10_000 });
+  const text = await toast.innerText();
+  assert.match(text, /Proyek Notifikasi|berhasil dibuat/i);
+  assert.match(text, /ruang kerja|sumber data/i);
+  assert.equal(await toast.locator("svg").count() >= 1, true);
+  await shot("e2e-05-notification");
+  assert.deepEqual(consoleErrors, []);
+});
+
 test("data contract prints policy, gate, and row rules", async () => {
   await goto("/data-contract?mode=demo");
   const body = await page.locator("body").innerText();
