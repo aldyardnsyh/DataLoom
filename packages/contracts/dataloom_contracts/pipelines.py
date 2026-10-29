@@ -1,4 +1,4 @@
-"""THE TYPED DAG CONTRACT (FR-020, FR-024, FR-032).
+﻿"""THE TYPED DAG CONTRACT (FR-020, FR-024, FR-032).
 
 Every consumer codes against these types:
 - Backend: validates ``PipelineDAG`` on create/update, stores it in
@@ -443,6 +443,11 @@ class PipelineDAG(ContractModel):
                     )
                 )
 
+        # A dangling edge makes every later graph walk unsafe. Stop here with the
+        # concrete missing-node message instead of failing on a KeyError in Kahn.
+        if issues:
+            raise ValueError(_format_issues(issues))
+
         # (4) exactly one entry, and it must be a SOURCE
         incoming = {e.to_node for e in self.edges}
         entries = [n for n in self.nodes if n.id not in incoming]
@@ -470,12 +475,20 @@ class PipelineDAG(ContractModel):
             )
         elif len(entries) > 1:
             names = ", ".join(sorted(n.id for n in entries))
+            non_sources = [n.id for n in entries if n.type is not NodeType.SOURCE]
+            orphan_note = (
+                f" Node non-source tanpa edge masuk tidak akan pernah dijalankan: "
+                f"{', '.join(sorted(non_sources))}."
+                if non_sources
+                else ""
+            )
             issues.append(
                 ValidationIssue(
                     field="edges",
                     message=(
                         "Hanya boleh ada satu titik masuk, tetapi ditemukan "
                         f"{len(entries)} node tanpa edge masuk: {names}."
+                        f"{orphan_note}"
                     ),
                 )
             )
