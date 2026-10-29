@@ -62,7 +62,7 @@ async def transition(
     The row is locked with ``SELECT ... FOR UPDATE`` so two workers cannot
     both move the same run.
     """
-    from app.db.models import Run  # local import: avoids cycles in tests
+    from app.db import Run  # local import: avoids cycles in tests
 
     run = (
         await session.execute(select(Run).where(Run.id == run_id).with_for_update())
