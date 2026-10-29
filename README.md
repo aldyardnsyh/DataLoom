@@ -21,7 +21,7 @@ yang tidak diberikan formula spreadsheet atau AI cleaner:
 - Demo desktop: 94 langkah lulus, tanpa console error.
 - Demo mobile 390x844: 41 langkah lulus, tanpa overflow dan tanpa console error.
 - Interaksi demo: buat proyek, dialog sumber, halaman agent, dan pengaturan lulus.
-- E2E regression tersimpan di repo: `npm run test:e2e` lulus 6/6, mencakup landing, rail 64px, run pipeline yang selesai dengan gate, karantina, kontrak data, dan sheet mobile.
+- E2E regression tersimpan di repo: `npm run test:e2e` lulus 7/7, mencakup landing, rail 64px, run pipeline yang selesai dengan gate, karantina, kontrak data, notifikasi, dan sheet mobile.
 - Backend unit suite lulus, dengan 6 test runtime-only di-skip.
 - Integration reconciliation lulus 5/5, 1 test SQL runtime di-skip.
 - Bukti screenshot disimpan di `~/.browserqa/artifacts/` pada mesin QA.
@@ -80,6 +80,23 @@ Detail modul, siklus request, dan batas kepercayaan ada di
 | Demo | Tiga proyek sintetis dengan cerita, run, gate, dan karantina masing-masing |
 
 Detail per modul ada di [`docs/FEATURES.md`](docs/FEATURES.md).
+
+## Galeri
+
+Semua gambar berasal dari mode demo dengan data sintetis. Galeri lengkap 27
+tangkapan layar ada di [`docs/GALLERY.md`](docs/GALLERY.md).
+
+| Landing | Dashboard |
+| --- | --- |
+| ![Landing](docs/screenshots/01-landing.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+
+| Karantina dan rekonsiliasi | Kontrak data |
+| --- | --- |
+| ![Karantina](docs/screenshots/11-data-quarantine.png) | ![Kontrak data](docs/screenshots/12-data-contract.png) |
+
+| Agent | Mobile |
+| --- | --- |
+| ![Agent](docs/screenshots/13-agents.png) | ![Mobile](docs/screenshots/22-mobile-landing.png) |
 
 ## Halaman
 
@@ -182,6 +199,7 @@ server kedua.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Komponen, alur request, batas kepercayaan |
 | [`docs/PAGES.md`](docs/PAGES.md) | Rute, tujuan halaman, state |
 | [`docs/FEATURES.md`](docs/FEATURES.md) | Fitur per modul dan bukti kode |
+| [`docs/GALLERY.md`](docs/GALLERY.md) | Galeri 27 tangkapan layar desktop dan mobile |
 
 ## Lisensi
 

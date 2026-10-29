@@ -192,5 +192,7 @@ API key tidak pernah dikirim balik ke browser.
   notifikasi karena belum ada layanan notifikasi.
 - **Mode demo**: satu banner di atas topbar, bukan label berulang di sidebar.
 - **Status**: selalu ikon dan teks, bukan warna saja.
+- **Notifikasi**: sukses, gagal, peringatan, info, dan loading memakai ikon,
+  warna, judul, deskripsi, dan durasi berbeda.
 - **Angka**: berasal dari API atau fixture demo yang diberi label.
 - **Error**: menyebut penyebab dan aksi berikutnya, bukan pesan generik.
