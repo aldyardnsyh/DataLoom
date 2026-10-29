@@ -65,7 +65,9 @@ def sha256_hex(value: str) -> str:
 
 
 def constant_time_eq(a: str, b: str) -> bool:
-    return hmac.compare_digest(a, b)
+    # hmac.compare_digest raises on non-ASCII str operands. Compare UTF-8 bytes
+    # instead, which keeps the comparison constant-time and locale-independent.
+    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -80,8 +82,11 @@ def generate_api_key() -> tuple[str, str, str]:
         prefix    = 8 url-safe chars, unique, indexed for lookup
         key_hash  = sha256(secret)  # the only server-side copy of the secret
     """
-    prefix = secrets.token_urlsafe(6)[:API_KEY_PREFIX_LEN]
-    secret = secrets.token_urlsafe(API_KEY_SECRET_LEN)
+    # Hex keeps the key alphabet free of ``_`` and ``-``. A urlsafe prefix or
+    # secret can contain ``_``, which makes the documented three-part format
+    # ambiguous and causes parse_api_key() to reject keys it just generated.
+    prefix = secrets.token_hex(API_KEY_PREFIX_LEN // 2)
+    secret = secrets.token_hex(API_KEY_SECRET_LEN)
     plaintext = f"{API_KEY_SCHEME}_{prefix}_{secret}"
     return plaintext, prefix, sha256_hex(secret)
 
