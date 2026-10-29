@@ -17,7 +17,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -672,12 +672,20 @@ class PipelineVersionOut(ReadModel):
 class PipelineValidateRequest(ContractModel):
     """Dry-run validation for the canvas 'Validate' button."""
 
-    dag: PipelineDAG
+    dag: dict[str, Any]
+
+
+class DagValidationIssue(ReadModel):
+    """Canvas-oriented issue: ``loc`` mirrors Pydantic, ``node_ref`` is a hint."""
+
+    loc: list[str | int] = Field(default_factory=list)
+    msg: str
+    node_ref: str | None = None
 
 
 class PipelineValidateResponse(ReadModel):
     valid: bool
-    issues: list[ValidationIssue] = Field(default_factory=list)
+    issues: list[DagValidationIssue] = Field(default_factory=list)
     topological_order: list[str] = Field(default_factory=list)
 
 
@@ -689,6 +697,7 @@ __all__ = [
     "CleanParams",
     "ColumnMapping",
     "ColumnRef",
+    "DagValidationIssue",
     "Condition",
     "DerivedColumn",
     "ENTRY_NODE_TYPES",

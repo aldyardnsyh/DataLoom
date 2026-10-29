@@ -1,4 +1,4 @@
-"""Pipeline routes (FR-020, FR-024, FR-027, FR-028)."""
+﻿"""Pipeline routes (FR-020, FR-024, FR-027, FR-028)."""
 
 from __future__ import annotations
 
@@ -243,7 +243,7 @@ async def validate_pipeline(
 ) -> PipelineValidateResponse:
     """Deterministic validation only. Same validator the UI and agents use."""
     try:
-        dag = PipelineDAG.model_validate(payload.dag.model_dump(mode="json", by_alias=True))
+        dag = PipelineDAG.model_validate(payload.dag)
     except ValidationError as exc:
         return PipelineValidateResponse(
             valid=False, issues=pipeline_service.format_dag_errors(exc)
