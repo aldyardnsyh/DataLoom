@@ -21,7 +21,7 @@ yang tidak diberikan formula spreadsheet atau AI cleaner:
 - Demo desktop: 94 langkah lulus, tanpa console error.
 - Demo mobile 390x844: 41 langkah lulus, tanpa overflow dan tanpa console error.
 - Interaksi demo: buat proyek, dialog sumber, halaman agent, dan pengaturan lulus.
-- E2E regression tersimpan di repo: `npm run test:e2e` lulus 5/5, mencakup landing, rail 64px, karantina, kontrak data, dan sheet mobile.
+- E2E regression tersimpan di repo: `npm run test:e2e` lulus 6/6, mencakup landing, rail 64px, run pipeline yang selesai dengan gate, karantina, kontrak data, dan sheet mobile.
 - Backend unit suite lulus, dengan 6 test runtime-only di-skip.
 - Integration reconciliation lulus 5/5, 1 test SQL runtime di-skip.
 - Bukti screenshot disimpan di `~/.browserqa/artifacts/` pada mesin QA.

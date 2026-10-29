@@ -126,6 +126,8 @@ Perilaku:
 | Tanpa server | Router in-memory di browser | `apps/web/lib/demo/backend.ts` |
 | Tiga proyek utuh | Penjualan, CRM, Inventori | `apps/web/lib/demo/fixtures.ts` |
 | Tulis berfungsi | Buat proyek, sumber, pipeline, run, approval, budget | `backend.ts` |
+| Run demo selesai | Menjalankan pipeline menghasilkan timeline node, gate, dan rasio | `backend.ts` (`completeDemoRun`) |
+| Unggahan membuat dataset | Init unggahan mendaftarkan dataset Bronze baru untuk proyek | `backend.ts` |
 | Tidak menyentuh jaringan | `apiFetch` short-circuit sebelum HTTP | `apps/web/lib/api.ts` |
 | Banner tunggal | Satu label demo di atas topbar | `demo-banner.tsx` |
 | Reset dan keluar | Mengembalikan fixture atau keluar tanpa akun | `demo-provider.tsx` |
