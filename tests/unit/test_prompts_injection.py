@@ -178,9 +178,10 @@ def test_injection_cell_appears_only_inside_the_data_wrapper() -> None:
         "Model bisa membacanya sebagai instruksi."
     )
 
-    # 3. The block must be balanced in the final message too.
-    block = content[begin : end + len("<<<END:sample_rows:0000000000000000>>>")]
-    assert wrapping.data_block_is_balanced(block), "Blok data pada pesan akhir tidak seimbang."
+    # 3. The final message must be structurally balanced (preamble + block).
+    assert wrapping.data_block_is_balanced(content), (
+        "Blok data pada pesan akhir tidak seimbang."
+    )
 
 
 def test_data_wrapper_sentence_precedes_the_injection_in_the_user_message() -> None:

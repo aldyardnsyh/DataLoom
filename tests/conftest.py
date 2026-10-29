@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for the DataLoom test suite.
+﻿"""Shared pytest fixtures for the DataLoom test suite.
 
 Assertions are written to be falsifiable: each one fails when the behaviour it
 describes is wrong.
@@ -15,6 +15,9 @@ in-process API-key cache never leaks between tests.
 
 from __future__ import annotations
 
+import importlib
+import importlib.abc
+import importlib.util
 import json
 import os
 import sys
@@ -76,6 +79,100 @@ for _name, _root in _APP_ROOTS.items():
 _CONTRACTS_ROOT = _REPO_ROOT / "packages" / "contracts"
 if _CONTRACTS_ROOT.exists() and str(_CONTRACTS_ROOT) not in sys.path:
     sys.path.insert(0, str(_CONTRACTS_ROOT))
+
+#: Tests import ``api_app`` / ``worker_app`` / ``agents_app`` because all three
+#: applications publish a top-level package literally named ``app``. Only one
+#: of them can own ``app`` at a time, so the autouse fixture below binds the
+#: right root for the current test module and registers the alias.
+_APP_BY_TEST = {
+    "test_csrf": "api",
+    "test_ingest_hot_path": "api",
+    "test_ingest_limits": "api",
+    "test_installation_settings": "api",
+    "test_parquet_preview": "api",
+    "test_pipeline_versions": "api",
+    "test_rbac": "api",
+    "test_security": "api",
+    "test_tenant_isolation": "api",
+    "test_agent_interrupt_resume": "agents",
+    "test_budget": "agents",
+    "test_profiler_contract": "agents",
+    "test_prompts_injection": "agents",
+    "test_sql_guard": "agents",
+    "test_dataset_registry": "worker",
+    "test_gate": "worker",
+    "test_quarantine_reasons": "worker",
+    "test_reconciliation": "worker",
+    "test_silver": "worker",
+    "test_transition": "worker",
+    "test_worker_restart": "worker",
+}
+
+
+_BOUND_APP: str | None = None
+_ALIAS_FINDER: "_AliasFinder | None" = None
+
+
+class _AliasLoader(importlib.abc.Loader):
+    def __init__(self, module: object) -> None:
+        self.module = module
+
+    def create_module(self, spec):  # noqa: ANN001, ANN201
+        return self.module
+
+    def exec_module(self, module) -> None:  # noqa: ANN001
+        return None
+
+
+class _AliasFinder(importlib.abc.MetaPathFinder):
+    """Map ``api_app.x`` to the already-loaded ``app.x`` module object."""
+
+    def __init__(self, alias: str) -> None:
+        self.alias = alias
+
+    def find_spec(self, fullname: str, path=None, target=None):  # noqa: ANN001, ANN201
+        if not (fullname == self.alias or fullname.startswith(self.alias + ".")):
+            return None
+        target_name = "app" + fullname[len(self.alias) :]
+        module = importlib.import_module(target_name)
+        return importlib.util.spec_from_loader(fullname, _AliasLoader(module))
+
+
+def _bind_app(name: str, *, force: bool = False) -> None:
+    global _BOUND_APP, _ALIAS_FINDER
+    if not force and _BOUND_APP == name and "app" in sys.modules:
+        return
+    if _ALIAS_FINDER is not None:
+        try:
+            sys.meta_path.remove(_ALIAS_FINDER)
+        except ValueError:
+            pass
+        _ALIAS_FINDER = None
+    root = _APP_ROOTS[name]
+    for module_name in list(sys.modules):
+        if module_name == "app" or module_name.startswith("app."):
+            del sys.modules[module_name]
+        if module_name == f"{name}_app" or module_name.startswith(f"{name}_app."):
+            del sys.modules[module_name]
+    for app_root in _APP_ROOTS.values():
+        while str(app_root) in sys.path:
+            sys.path.remove(str(app_root))
+    sys.path.insert(0, str(root))
+    module = importlib.import_module("app")
+    sys.modules[f"{name}_app"] = module
+    _ALIAS_FINDER = _AliasFinder(f"{name}_app")
+    sys.meta_path.insert(0, _ALIAS_FINDER)
+    _BOUND_APP = name
+
+
+@pytest.fixture(autouse=True)
+def bind_test_app(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Expose the app under test as ``<name>_app`` for this module."""
+    stem = Path(request.module.__file__).stem if request.module is not None else ""
+    app_name = _APP_BY_TEST.get(stem)
+    if app_name:
+        _bind_app(app_name)
+    yield
 
 requires_api = pytest.mark.skipif(
     not (_APP_ROOTS["api"] / "app" / "main.py").exists(),
@@ -804,6 +901,11 @@ def make_mock(**attrs: Any) -> MagicMock:
     return mock
 
 
+# Bind a default app so test modules that import ``app.*`` at collection time
+# (before the autouse fixture runs) resolve to a real package.
+_bind_app("agents")
+
+
 __all__ = [
     "Actor",
     "FakeRedis",
@@ -816,3 +918,4 @@ __all__ = [
     "requires_api",
     "requires_worker",
 ]
+

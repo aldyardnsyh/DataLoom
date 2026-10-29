@@ -1,18 +1,14 @@
-"""Reconciliation evidence: Silver must agree with Gold (FR-023).
+﻿"""Reconciliation evidence: Silver must agree with Gold (FR-023).
 
 Two layers are covered:
 1. ``apps/worker/app/reconcile.py`` helper maths.
-2. ``apps/worker/app/gold.py`` ``reconcile`` SQL contract (executed against an
-   in-memory DuckDB? NO — DuckDB is not started here). Instead we assert the
-   pure helper behaviour and the *shape* of the returned evidence, and we mark
-   the SQL-level assertion as requiring runtime (documented in UNVERIFIED).
+2. ``apps/worker/app/gold.py`` ``reconcile`` SQL contract (not started here).
+   The pure helper shape is asserted; SQL execution requires runtime.
 """
 
 from __future__ import annotations
 
 import pytest
-
-from app.reconcile import measure_sum, reconciliation_evidence, sums_agree
 
 pl = pytest.importorskip("polars", reason="polars wajib untuk uji rekonsiliasi")
 
@@ -20,6 +16,8 @@ pytestmark = pytest.mark.integration
 
 
 def test_measure_sum_ignores_nulls_and_non_numeric() -> None:
+    from app.reconcile import measure_sum
+
     frame = pl.DataFrame({"amount": [1.0, None, 2.0], "label": ["a", "b", "c"]})
     assert measure_sum(frame, "amount") == pytest.approx(3.0)
     assert measure_sum(frame, "label") == 0.0, "Kolom non-numerik dianggap 0, bukan galat."
@@ -27,12 +25,16 @@ def test_measure_sum_ignores_nulls_and_non_numeric() -> None:
 
 
 def test_sums_agree_within_tolerance() -> None:
+    from app.reconcile import sums_agree
+
     assert sums_agree(100.0, 100.0)
     assert sums_agree(100.0, 100.0 + 1e-9)
     assert not sums_agree(100.0, 100.01), "Selisih nyata harus dianggap tidak cocok."
 
 
 def test_reconciliation_evidence_passes_when_sums_match() -> None:
+    from app.reconcile import reconciliation_evidence
+
     evidence = reconciliation_evidence(
         silver_rows=10,
         gold_rows=3,
@@ -44,6 +46,8 @@ def test_reconciliation_evidence_passes_when_sums_match() -> None:
 
 def test_reconciliation_evidence_fails_when_gold_is_tampered() -> None:
     """A tampered gold sum MUST fail: this is the gate's strongest check."""
+    from app.reconcile import reconciliation_evidence
+
     evidence = reconciliation_evidence(
         silver_rows=10,
         gold_rows=3,
@@ -59,6 +63,8 @@ def test_reconciliation_evidence_fails_when_gold_is_tampered() -> None:
 
 def test_gold_row_count_cannot_exceed_silver_rows() -> None:
     """Gold aggregates can only reduce rows; more rows means a broken aggregate."""
+    from app.reconcile import reconciliation_evidence
+
     evidence = reconciliation_evidence(silver_rows=5, gold_rows=9, measures={})
     assert evidence["passed"] is False, "Gold tidak boleh memiliki baris lebih banyak dari Silver."
 

@@ -68,8 +68,8 @@ async def test_per_run_token_limit_blocks_the_next_call(fake_session) -> None:  
         settings=_settings(DEFAULT_PER_RUN_TOKEN_LIMIT=100),
     )
     fake_session.queue_rows((10.0, 100))  # monthly budget, per-run limit
-    fake_session.queue_scalar(0.0)  # spent this month
     fake_session.queue_scalar(95)  # tokens already used by this run
+    fake_session.queue_scalar(0.0)  # spent this month
 
     with pytest.raises(BudgetExceeded) as excinfo:
         await guard.ensure_can_spend(estimated_tokens=50, max_tokens_out=50)
@@ -121,4 +121,5 @@ async def test_call_allowed_within_budget(fake_session) -> None:  # noqa: ANN001
     fake_session.queue_scalar(0)
 
     await guard.ensure_can_spend(estimated_tokens=10, max_tokens_out=10)
+
 
