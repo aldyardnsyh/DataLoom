@@ -211,10 +211,10 @@ def build_evidence_text(proposal: dict[str, Any], stats_by_column: dict[str, dic
 
     facts: list[str] = []
     null_ratio = stats.get("null_ratio")
-    if isinstance(null_ratio, (int, float)):
-        facts.append(f"{null_ratio * 100:.1f}% nilai kosong")
+    if isinstance(null_ratio, (int, float)) and float(null_ratio) > 0:
+        facts.append(f"{float(null_ratio) * 100:.1f}% nilai kosong")
     distinct = stats.get("distinct_count")
-    if isinstance(distinct, int):
+    if isinstance(distinct, int) and distinct > 0:
         facts.append(f"{distinct} nilai unik")
     patterns = stats.get("patterns") or {}
     if isinstance(patterns, dict) and patterns:
