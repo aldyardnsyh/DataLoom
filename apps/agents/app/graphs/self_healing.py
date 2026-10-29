@@ -17,9 +17,11 @@ from __future__ import annotations
 import uuid
 from typing import Any, TypedDict
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.db.models import AgentProposal, Artifact
 from app.graphs.base import call_llm, parse_json_object, record_event
 from app.graphs.pipeline_builder import validate_dag_payload
 from app.llm.budget import BudgetGuard
@@ -27,7 +29,13 @@ from app.llm.provider import LLMProvider
 from app.prompts.healing import build_healing_messages
 from app.prompts.wrapping import wrap_untrusted_data
 from app.tools.logs import collect_run_evidence
-from dataloom_contracts._base import AgentOutputStatus, DiagnosisCategory
+from dataloom_contracts._base import (
+    AgentOutputStatus,
+    ArtifactType,
+    DiagnosisCategory,
+    ProposalKind,
+    ProposalStatus,
+)
 
 MAX_PROPOSALS_PER_RUN = 2
 
@@ -180,6 +188,70 @@ def after_validate_fix(state: HealingState) -> str:
     return "needs_human"
 
 
+async def persist_healing_proposal(
+    session: AsyncSession, *, state: HealingState
+) -> AgentProposal | None:
+    """Persist the fix as one ``AgentProposal`` + ``healing_diagnosis`` artifact.
+
+    Mirrors the profiler ``persist_proposals`` pattern: proposal starts as
+    ``pending``; the approval interrupt decides later. Cap: at most
+    ``MAX_PROPOSALS_PER_RUN`` rows per failed run. Returns ``None`` when there
+    is no fix to persist (insufficient evidence path).
+    """
+    fix = state.get("fix")
+    if not isinstance(fix, dict) or not fix:
+        return None
+    org_id = uuid.UUID(state["org_id"])
+    agent_run_id = uuid.UUID(state["agent_run_id"])
+    existing = await session.execute(
+        select(func.count())
+        .select_from(AgentProposal)
+        .where(
+            AgentProposal.agent_run_id == agent_run_id,
+            AgentProposal.org_id == org_id,
+            AgentProposal.kind == ProposalKind.FIX_PROPOSAL.value,
+        )
+    )
+    if (existing.scalar() or 0) >= MAX_PROPOSALS_PER_RUN:
+        from app.graphs.base import ContractViolation
+
+        raise ContractViolation("Batas 2 usulan per run tercapai.")
+    row = AgentProposal(
+        org_id=org_id,
+        agent_run_id=agent_run_id,
+        kind=ProposalKind.FIX_PROPOSAL.value,
+        title=str(fix.get("title") or state.get("summary") or "Fix usulan self-healing")[:200],
+        payload_json=fix,
+        evidence_json={"evidence": state.get("evidence", {}), "diagnosis": state.get("diagnosis")},
+        risk="low",
+        confidence=0.0,
+        status=ProposalStatus.PENDING.value,
+    )
+    session.add(row)
+    await session.flush()
+    session.add(
+        Artifact(
+            org_id=org_id,
+            project_id=uuid.UUID(state["project_id"]),
+            type=ArtifactType.DIAGNOSIS.value,
+            version=1,
+            producing_agent="self_healing",
+            agent_run_id=agent_run_id,
+            validation_status="draft" if state.get("issues") else "valid",
+            payload_json={
+                "diagnosis": state.get("diagnosis"),
+                "category": state.get("category"),
+                "summary": state.get("summary"),
+                "fix": fix,
+                "issues": state.get("issues", []),
+                "open_questions": state.get("open_questions", []),
+            },
+        )
+    )
+    await session.flush()
+    return row
+
+
 __all__ = [
     "MAX_PROPOSALS_PER_RUN",
     "HealingState",
@@ -187,6 +259,7 @@ __all__ = [
     "after_validate_fix",
     "collect_evidence",
     "diagnose",
+    "persist_healing_proposal",
     "validate_fix",
 ]
 

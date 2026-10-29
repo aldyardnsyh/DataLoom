@@ -92,7 +92,9 @@ def build_healing_messages(
     if pipeline_version:
         parts.extend(["", "## Versi pipeline saat gagal", json.dumps(pipeline_version, ensure_ascii=False, indent=2, default=str)])
     if previous_error:
-        parts.extend(["", "## Perbaikan yang diperlukan", previous_error[:1000]])
+        parts.extend(
+            ["", "## Perbaikan yang diperlukan", wrap_untrusted_data(previous_error[:1000], "previous_error")]
+        )
     return [
         ChatMessage(role="system", content=build_system_prompt()),
         ChatMessage(role="user", content="\n".join(parts)),
