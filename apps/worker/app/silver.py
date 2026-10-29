@@ -145,7 +145,7 @@ def _compile_regex(pattern: str) -> re.Pattern[str]:
 
 def _mask_rule(
     frame: pl.DataFrame, rule: dict[str, Any]
-) -> tuple[pl.Series, str]:
+) -> tuple[pl.Series | pl.Expr, str]:
     """Return a boolean mask of FAILING rows plus a human reason string."""
     kind = rule.get("kind")
     column = rule.get("column")
@@ -165,7 +165,12 @@ def _mask_rule(
         return mask.fill_null(True), f"{rule_id}: nilai kosong pada '{column}'"
 
     if kind == "unique":
-        duplicated = col.is_duplicated().fill_null(False)
+        # Quarantine every duplicate AFTER the first occurrence. Marking all
+        # copies would throw away the row that is allowed to stay.
+        duplicated = (
+            col.is_duplicated().fill_null(False)
+            & col.is_first_distinct().not_()
+        )
         return duplicated, f"{rule_id}: nilai duplikat pada '{column}'"
 
     if kind == "type":
@@ -267,6 +272,11 @@ def apply_rules(
             continue  # warnings are reported, never quarantine (A3 rule)
         mask, detail = _mask_rule(frame, rule)
         evaluated += 1
+        # Polars expressions are lazy; evaluate the failing mask against the
+        # frame before asking for Python values. Returning an Expr and calling
+        # ``.to_list()`` directly is the bug this guard prevents.
+        if isinstance(mask, pl.Expr):
+            mask = frame.select(mask.alias("_mask")).to_series()
         values = mask.to_list()
         for i, failed in enumerate(values):
             if failed and not failing_mask[i]:
@@ -278,7 +288,12 @@ def apply_rules(
     if evaluated == 0:
         return frame, [], {}
 
-    quarantine = frame.filter(failing_mask).with_columns(
+    fail_values = failing_mask.to_list()
+    reason_codes = [code for code, failed in zip(reason_codes, fail_values) if failed]
+    reason_details = [detail for detail, failed in zip(reason_details, fail_values) if failed]
+    rule_ids = [rule_id for rule_id, failed in zip(rule_ids, fail_values) if failed]
+
+    quarantine = frame.filter(pl.Series(fail_values)).with_columns(
         [
             pl.Series("_reason_code", reason_codes),
             pl.Series("_reason_detail", reason_details),
@@ -405,3 +420,21 @@ def profile_columns(frame: pl.DataFrame) -> dict[str, Any]:
 def to_jsonable(value: Any) -> Any:
     """Small helper so profiling output can be stored in JSONB."""
     return json.loads(json.dumps(value, default=str))
+
+
+def silver_key(*, org_id: str, run_id: str, node_id: str) -> str:
+    stamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+    return f"org/{org_id}/silver/run={run_id}/{node_id}-{stamp}.parquet"
+
+
+def write_silver(
+    frame: pl.DataFrame, *, org_id: str, run_id: str, node_id: str
+) -> tuple[str, int] | None:
+    """Persist the passing Silver snapshot so the Data Explorer can read it."""
+    if frame.height == 0:
+        return None
+    buffer = io.BytesIO()
+    frame.write_parquet(buffer, compression="zstd")
+    key = silver_key(org_id=org_id, run_id=run_id, node_id=node_id)
+    storage.put_bytes(key, buffer.getvalue(), "application/vnd.apache.parquet")
+    return storage.uri_for(key), frame.height

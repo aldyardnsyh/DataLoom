@@ -33,6 +33,7 @@ class GoldResult:
     table: str
     reconciled: bool
     reconciliation: dict[str, Any]
+    columns: list[dict[str, str]]
 
 
 def duckdb_path_for(org_id: str, project_id: str) -> str:
@@ -155,6 +156,10 @@ def write_gold(
             metrics=metrics,
             silver_rows=silver.height,
         )
+        columns = [
+            {"name": str(row[0]), "dtype": str(row[1])}
+            for row in con.execute(f"DESCRIBE {_quote(gold_temp)}").fetchall()
+        ]
     finally:
         con.close()
 
@@ -165,6 +170,7 @@ def write_gold(
         table=dataset_name,
         reconciled=bool(reconciliation.get("passed")),
         reconciliation=reconciliation,
+        columns=columns,
     )
 
 

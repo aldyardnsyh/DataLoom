@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import bronze, gold, metrics, quarantine, silver
 from app.config import get_settings
+from app.datasets import register_dataset, safe_dataset_name
 from app.db import Dataset, Pipeline, PipelineVersion, Run, RunNode, Source
 from app.gate import evaluate_gate
 
@@ -291,7 +292,13 @@ async def execute_run(session: AsyncSession, run_id: uuid.UUID) -> str:
             try:
                 frame_out, rejected, reasons, extra = await _with_timeout(
                     _dispatch(
-                        session, node.type.value, node.params.model_dump(mode="json"), frame_in, run
+                        session,
+                        node.type.value,
+                        node.params.model_dump(mode="json"),
+                        frame_in,
+                        run,
+                        pipeline.name,
+                        node.id,
                     ),
                     settings.NODE_TIMEOUT_SECONDS,
                 )
@@ -439,6 +446,8 @@ async def _dispatch(
     params: dict[str, Any],
     frame_in: pl.DataFrame,
     run: Run,
+    pipeline_name: str,
+    node_id: str,
 ) -> tuple[pl.DataFrame, list[dict[str, Any]], dict[str, int], dict[str, Any]]:
     """Run a single node. Returns ``(frame_out, rejected, reasons, extra)``."""
     if node_type == "source":
@@ -447,13 +456,53 @@ async def _dispatch(
 
     if node_type == "validate":
         passing, rejected, counts = await _run_validate(params, frame_in)
+        pipeline_slug = safe_dataset_name(pipeline_name, fallback="pipeline")
+        node_slug = safe_dataset_name(node_id, fallback="validate")
+
+        silver_write = await asyncio.to_thread(
+            silver.write_silver,
+            passing,
+            org_id=str(run.org_id),
+            run_id=str(run.id),
+            node_id=node_slug,
+        )
+        if silver_write:
+            silver_uri, silver_rows = silver_write
+            await register_dataset(
+                session,
+                org_id=run.org_id,
+                project_id=run.project_id,
+                layer="silver",
+                name=f"silver_{pipeline_slug}_{node_slug}",
+                storage_uri=silver_uri,
+                row_count=silver_rows,
+                frame=passing,
+            )
+
         if rejected:
             q_frame = quarantine.build_quarantine_frame(
                 rejected, reason_code="validation_failed", reason_detail="rule violation"
             )
-            quarantine.write_quarantine(
-                q_frame, org_id=str(run.org_id), run_id=str(run.id), node_id="validate"
+            q_write = await asyncio.to_thread(
+                quarantine.write_quarantine,
+                q_frame,
+                org_id=str(run.org_id),
+                run_id=str(run.id),
+                node_id=node_slug,
             )
+            if q_write:
+                q_uri, q_rows = q_write
+                await register_dataset(
+                    session,
+                    org_id=run.org_id,
+                    project_id=run.project_id,
+                    layer="quarantine",
+                    name=f"quarantine_{pipeline_slug}_{node_slug}",
+                    storage_uri=q_uri,
+                    row_count=q_rows,
+                    frame=q_frame,
+                    extra={"reasons": counts},
+                )
         return passing, rejected, counts, {}
 
     if node_type == "clean":
@@ -482,6 +531,35 @@ async def _dispatch(
             write_mode=params.get("write_mode", "overwrite"),
         )
         metrics.worker_rows_total.labels(layer="gold").inc(result.rows_out)
+
+        # The DuckDB table is the query target; the Parquet export is what the
+        # Data Explorer reads. A failed export must not pretend the dataset is
+        # readable, but it also must not throw away a valid gold table.
+        export_uri = ""
+        try:
+            export_uri, _ = await asyncio.to_thread(
+                gold.export_gold_parquet,
+                org_id=str(run.org_id),
+                project_id=str(run.project_id),
+                dataset_name=result.dataset_name,
+            )
+        except Exception:  # noqa: BLE001 - keep the run result, surface the gap
+            logger.exception(
+                "Gold %s tertulis di DuckDB tetapi ekspor Parquet gagal (run=%s).",
+                result.dataset_name,
+                run.id,
+            )
+
+        await register_dataset(
+            session,
+            org_id=run.org_id,
+            project_id=run.project_id,
+            layer="gold",
+            name=result.dataset_name,
+            storage_uri=export_uri,
+            row_count=result.rows_out,
+            columns=result.columns,
+        )
         return frame_in, [], {}, {"reconciliation": result.reconciliation, "dataset_name": result.dataset_name}
 
     raise ValueError(f"Tipe node tidak dikenal: {node_type}")

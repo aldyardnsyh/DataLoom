@@ -34,6 +34,12 @@ def build_quarantine_frame(
     frame = pl.DataFrame(rows, strict=False) if rows else pl.DataFrame()
     if frame.height == 0:
         return frame
+    # ``silver.apply_rules`` already annotates each rejected row with the
+    # specific rule code and rule id. Overwriting those columns with a generic
+    # "validation_failed" would destroy the only information an operator needs
+    # to fix the rule, so keep the existing annotation when it is present.
+    if "_reason_code" in frame.columns:
+        return frame
     return frame.with_columns(
         [
             pl.lit(reason_code).alias("_reason_code"),
