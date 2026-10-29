@@ -161,6 +161,20 @@ test("success notification shows an icon, title, and description", async () => {
   assert.deepEqual(consoleErrors, []);
 });
 
+test("setup wizard lists the five first-run steps", async () => {
+  await goto("/setup?mode=demo");
+  const steps = page.locator("[data-setup-steps] > li");
+  assert.equal(await steps.count(), 5);
+  const body = await page.locator("body").innerText();
+  assert.match(body, /Buat proyek/);
+  assert.match(body, /Hubungkan sumber data/);
+  assert.match(body, /Buat pipeline siap pakai/);
+  assert.match(body, /Jalankan pipeline/);
+  await assertNoOverflow();
+  await shot("e2e-08-setup");
+  assert.deepEqual(consoleErrors, []);
+});
+
 test("data contract prints policy, gate, and row rules", async () => {
   await goto("/data-contract?mode=demo");
   const body = await page.locator("body").innerText();
