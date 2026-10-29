@@ -31,6 +31,8 @@ def _get_client() -> Any:
                 signature_version="s3v4",
                 s3={"addressing_style": "path"},
                 retries={"max_attempts": 3, "mode": "standard"},
+                connect_timeout=5,
+                read_timeout=20,
             ),
         }
         if settings.S3_ENDPOINT_URL:
@@ -78,6 +80,18 @@ def get_range(key: str, length: int = 8) -> bytes:
         Bucket=settings.S3_BUCKET, Key=key, Range=f"bytes=0-{length - 1}"
     )
     return obj["Body"].read(length)
+
+
+def key_from_uri(uri: str) -> str:
+    """Extract the object key and refuse a URI from a different bucket."""
+    settings = get_settings()
+    prefix = f"s3://{settings.S3_BUCKET}/"
+    if not uri.startswith(prefix):
+        raise ValueError("URI storage tidak dikenal untuk bucket ini.")
+    key = uri[len(prefix) :]
+    if not key or key.startswith("/") or ".." in key.split("/"):
+        raise ValueError("Key storage tidak valid.")
+    return key
 
 
 def get_bytes(key: str) -> bytes:

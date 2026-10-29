@@ -6,6 +6,7 @@ Preview is capped at ``MAX_PREVIEW_ROWS`` = 1.000 by contract. The response mark
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -22,6 +23,7 @@ from dataloom_contracts.datasets import MAX_PREVIEW_ROWS, DatasetColumn, Dataset
 from dataloom_contracts._base import Layer
 
 router = APIRouter(tags=["datasets"])
+logger = logging.getLogger("dataloom.explore")
 
 
 def _to_out(dataset: Dataset) -> DatasetOut:
@@ -76,16 +78,51 @@ async def preview_dataset(
         if isinstance(entry, dict) and entry.get("name")
     ]
 
-    # Only gold datasets live in the DuckDB warehouse; parquet layers cannot be
-    # queried without object storage access from the API, so we return schema +
-    # counts and an empty row list instead of pretending to have data.
+# Gold lives in DuckDB. Bronze, Silver, and Quarantine are Parquet objects.
+    # Both paths are bounded and scoped to the project's org, but they read from
+    # different engines.
     if dataset.layer != Layer.GOLD.value:
+        if not dataset.storage_uri:
+            return DatasetPreview(
+                dataset_id=dataset.id,
+                layer=Layer(dataset.layer),
+                columns=columns,
+                rows=[],
+                total_rows=int(dataset.row_count or 0),
+                truncated=False,
+            )
+
+        try:
+            preview = await query_service.preview_parquet(
+                uri=dataset.storage_uri,
+                org_id=project.org_id,
+                limit=limit,
+            )
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            # A missing object must not turn into fabricated rows. Return the
+            # schema and counts the registry already knows, and leave the gap
+            # visible in logs for the operator.
+            logger.warning("Preview Parquet gagal untuk dataset %s: %s", dataset.id, exc)
+            return DatasetPreview(
+                dataset_id=dataset.id,
+                layer=Layer(dataset.layer),
+                columns=columns,
+                rows=[],
+                total_rows=int(dataset.row_count or 0),
+                truncated=False,
+            )
+
+        dtype_by_name = {column.name: column.dtype for column in columns}
         return DatasetPreview(
             dataset_id=dataset.id,
-            columns=columns,
-            rows=[],
-            total_rows=int(dataset.row_count or 0),
-            truncated=False,
+            layer=Layer(dataset.layer),
+            columns=[
+                DatasetColumn(name=name, dtype=dtype_by_name.get(name, "unknown"))
+                for name in preview.columns
+            ],
+            rows=preview.rows,
+            total_rows=int(dataset.row_count or len(preview.rows)),
+            truncated=preview.truncated,
         )
 
     try:
@@ -100,8 +137,9 @@ async def preview_dataset(
 
     return DatasetPreview(
         dataset_id=dataset.id,
+        layer=Layer.GOLD,
         columns=[DatasetColumn(name=name, dtype="unknown") for name in result.columns],
-        rows=result.rows,
+        rows=[[row.get(name) for name in result.columns] for row in result.rows],
         total_rows=int(dataset.row_count or result.row_count),
         truncated=result.truncated,
     )

@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
+import tempfile
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -31,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.core.errors import NotFound, ValidationProblem
 from app.db.models import Dataset
+from app.services import storage
 
 logger = logging.getLogger("dataloom.query")
 
@@ -41,6 +44,13 @@ class QueryResult:
     rows: list[dict[str, Any]]
     truncated: bool
     row_count: int
+
+
+@dataclass(slots=True)
+class PreviewResult:
+    columns: list[str]
+    rows: list[list[str | int | float | bool | None]]
+    truncated: bool
 
 
 class UnsafeQuery(ValueError):
@@ -322,11 +332,12 @@ async def project_tables(
 ) -> set[str]:
     """Table allowlist for a project (queryable dataset names).
 
-    Only ``silver``/``gold`` rows are queryable: Bronze/Quarantine live as
-    Parquet and must never be reachable from a Text-to-SQL statement. Names are
-    additionally *shape-checked* here so a row created outside the DAG validator
-    (``SinkParams.dataset_name`` is ``^[a-z0-9_]+$``) can never smuggle a
-    schema-qualified name such as ``pg_catalog.pg_shadow`` into the allowlist.
+    Only ``gold`` rows are queryable from the DuckDB warehouse: Bronze, Silver,
+    and Quarantine live as Parquet and must never be reachable from a
+    Text-to-SQL statement. Names are additionally *shape-checked* here so a row
+    created outside the DAG validator (``SinkParams.dataset_name`` is
+    ``^[a-z0-9_]+$``) can never smuggle a schema-qualified name such as
+    ``pg_catalog.pg_shadow`` into the allowlist.
     """
     from dataloom_contracts._base import Layer
 
@@ -335,7 +346,7 @@ async def project_tables(
             select(Dataset.name, Dataset.layer).where(
                 Dataset.org_id == org_id,
                 Dataset.project_id == project_id,
-                Dataset.layer.in_([Layer.SILVER.value, Layer.GOLD.value]),
+                Dataset.layer == Layer.GOLD.value,
             )
         )
     ).all()
@@ -373,6 +384,75 @@ async def get_dataset(
     if row is None:
         raise NotFound("Dataset tidak ditemukan.")
     return row
+
+
+def _sql_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _json_scalar(value: Any) -> str | int | float | bool | None:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _preview_parquet_sync(
+    *, uri: str, org_id: uuid.UUID, limit: int, timeout_seconds: int = 10
+) -> PreviewResult:
+    """Read a bounded preview from a Parquet object.
+
+    The object key is derived from the stored URI and must sit under this
+    organisation's prefix. The file is copied to a server-owned temp path and
+    read by DuckDB; no user-controlled path or SQL reaches the engine.
+    """
+    key = storage.key_from_uri(uri)
+    if not key.startswith(f"org/{org_id}/"):
+        raise ValueError("Dataset bukan milik organisasi ini.")
+
+    head = storage.head_object(key)
+    if head is not None and int(head.get("size") or 0) > 50 * 1024 * 1024:
+        raise ValueError("Objek terlalu besar untuk pratinjau.")
+
+    body = storage.get_bytes(key)
+    fd, path = tempfile.mkstemp(prefix="dataloom-preview-", suffix=".parquet")
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(body)
+        con = duckdb.connect(":memory:")
+        try:
+            con.execute("SET threads=1")
+            # The file is a server-owned temp copy and the result is capped by
+            # the LIMIT below. DuckDB's in-memory connection does not support
+            # statement_timeout on every build, so do not depend on it here.
+            literal_path = _sql_literal(path.replace("\\", "/"))
+            cursor = con.execute(
+                f"SELECT * FROM read_parquet({literal_path}) LIMIT {int(limit) + 1}"
+            )
+            columns = [description[0] for description in cursor.description]
+            raw_rows = cursor.fetchall()
+            truncated = len(raw_rows) > limit
+            rows = [
+                [_json_scalar(value) for value in row]
+                for row in raw_rows[:limit]
+            ]
+            return PreviewResult(columns=columns, rows=rows, truncated=truncated)
+        finally:
+            con.close()
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+async def preview_parquet(
+    *, uri: str, org_id: uuid.UUID, limit: int
+) -> PreviewResult:
+    return await asyncio.to_thread(
+        _preview_parquet_sync, uri=uri, org_id=org_id, limit=limit
+    )
 
 
 async def preview_rows(
