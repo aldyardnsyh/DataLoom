@@ -49,6 +49,9 @@ EXPECTED_EDGES: frozenset[tuple[str, str]] = frozenset(
         ("queued", "cancelled"),
         ("running", "succeeded"),
         ("running", "failed"),
+        # Gate can halt a run without a node crash (e.g. quarantine ratio
+        # over the threshold), so running -> needs_attention is legal.
+        ("running", "needs_attention"),
         ("running", "cancelled"),
         ("failed", "retrying"),
         ("failed", "needs_attention"),
