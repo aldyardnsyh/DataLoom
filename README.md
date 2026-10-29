@@ -69,6 +69,7 @@ Detail modul, siklus request, dan batas kepercayaan ada di
 | Sumber data | Webhook, unggah CSV/Parquet, REST polling, Postgres read-only, rotasi API key |
 | Pipeline | Kanvas DAG, validasi, versi immutable, eksekusi worker, lineage |
 | Kualitas | Empat aturan gate, karantina dengan alasan, rekonsiliasi, kontrak data |
+| Data Explorer | Pratinjau Parquet Bronze/Silver/Karantina, Gold dari DuckDB, schema, lineage |
 | Operasi | Monitor run dengan SSE, log, timeline, cancel, rerun |
 | Agent | Usulan pembersihan, approval manusia, confidence, budget, audit |
 | Tanya data | Text-to-SQL read-only dengan guard dan batas baris |
@@ -166,9 +167,6 @@ server kedua.
 
 ## Batasan
 
-- API belum membaca pratinjau baris Parquet untuk lapisan Bronze, Silver, dan
-  Karantina. UI menampilkan jumlah dan alasan yang tersedia, dan tidak
-  mengarang baris.
 - Scheduler cron berjalan in-process; beberapa replika API membutuhkan leader
   election yang belum ada.
 - Redis AOF `everysec` dapat kehilangan sekitar satu detik data saat crash.

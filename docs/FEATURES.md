@@ -24,6 +24,7 @@
 | Eksekusi worker | Topological order, timeout per node, retry terbatas | `apps/worker/app/dag_runner.py` |
 | Bronze immutable | Setiap batch disimpan dengan id sendiri | `apps/worker/app/bronze.py` |
 | Silver dan Gold | Cast, normalisasi, dedup, validasi, agregasi | `apps/worker/app/silver.py`, `gold.py` |
+| Registri dataset | Worker mendaftarkan Silver, Gold, dan Karantina ke tabel `datasets` | `apps/worker/app/datasets.py`, `dag_runner.py` |
 | Lineage dataset | Graf sumber ke Bronze, Silver, Gold, Karantina | `apps/api/app/services/pipeline_service.py`, `/pipelines/lineage` |
 
 ## 3. Gerbang kualitas deterministik
@@ -56,7 +57,8 @@ Perilaku:
 | Rasio terhadap ambang | Rasio run dibandingkan dengan pengaturan proyek | `apps/worker/app/gate.py` |
 | Ledger run | Operator melihat run mana yang menolak dan berapa barisnya | `apps/web/components/domain/quarantine-tab.tsx` |
 | Alasan terbanyak | Dikelompokkan dari kode alasan, bukan teks bebas | `quarantine-tab.tsx` |
-| State jujur | Jika API tidak mengembalikan baris Parquet, UI tidak mengarang baris | `quarantine-tab.tsx` |
+| Pratinjau Parquet | API membaca objek Parquet milik org, membatasi 1.000 baris, dan tidak mengarang baris | `apps/api/app/services/query_service.py`, `explore.py` |
+| State jujur | Jika objek hilang atau gagal dibaca, UI menampilkan skema dan jumlah tanpa baris palsu | `quarantine-tab.tsx`, `explore.py` |
 
 ## 5. Kontrak data
 

@@ -41,6 +41,10 @@ tests/        unit, integrasi, isolasi tenant, recovery
 | Quarantine | Worker | Parquet | `_reason_code`, `_reason_detail`, `_row_id` |
 | Gold | Worker | DuckDB dan Parquet | hanya setelah gate lulus, direkonsiliasi |
 
+Worker mendaftarkan Silver, Gold, dan Karantina ke tabel `datasets`. API
+membaca Gold dari DuckDB dan lapisan Parquet dari object storage, dengan batas
+1.000 baris dan pemeriksaan prefix `org/{org_id}/` sebelum membaca objek.
+
 ## Gate kualitas
 
 Empat aturan, dievaluasi kode:
