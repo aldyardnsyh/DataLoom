@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -46,15 +47,29 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
             length = request.headers.get("content-length")
             try:
                 declared = int(length) if length is not None else None
-            except ValueError:  # malformed header -> 4xx via the error envelope
-                from app.core.errors import ValidationProblem
-
-                raise ValidationProblem("Header Content-Length tidak valid.") from None
+            except ValueError:
+                # Middleware exceptions bypass FastAPI's exception handlers
+                # (they sit outside ExceptionMiddleware). Return the uniform
+                # envelope directly instead of turning a 4xx into a 500.
+                return JSONResponse(
+                    status_code=422,
+                    content={
+                        "code": "validation_error",
+                        "message": "Header Content-Length tidak valid.",
+                        "request_id": request_id_ctx.get(),
+                    },
+                )
             if declared is not None and declared > settings.INGEST_MAX_BODY_BYTES:
-                from app.core.errors import PayloadTooLarge
-
-                raise PayloadTooLarge(
-                    f"Ukuran permintaan melebihi batas {settings.INGEST_MAX_BODY_BYTES} byte."
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "code": "payload_too_large",
+                        "message": (
+                            "Ukuran permintaan melebihi batas "
+                            f"{settings.INGEST_MAX_BODY_BYTES} byte."
+                        ),
+                        "request_id": request_id_ctx.get(),
+                    },
                 )
         return await call_next(request)
 
