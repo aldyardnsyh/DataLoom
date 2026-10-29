@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { ErrorState } from "@/components/domain/error-state";
 import { BlockSkeleton } from "@/components/domain/state-loading";
@@ -57,10 +57,10 @@ export function QualityPanel() {
     mutationFn: (settings: ProjectSettings) =>
       api.projects.updateSettings(activeProject!.id, settings),
     onSuccess: async () => {
-      toast.success(t.settings.savedGates);
+      notify.success(t.settings.savedGates, { description: t.notify.gatesSaved });
       await queryClient.invalidateQueries({ queryKey: ["project-settings", activeProject?.id] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   return (
@@ -161,3 +161,4 @@ export function QualityPanel() {
     </Card>
   );
 }
+

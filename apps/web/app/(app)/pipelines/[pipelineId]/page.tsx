@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { EmptyState } from "@/components/domain/empty-state";
 import { ErrorState } from "@/components/domain/error-state";
@@ -240,10 +240,13 @@ export default function PipelineEditorPage() {
       setIssues(Array.isArray(result.issues) ? result.issues : []);
       setLocalValid(result.valid);
       setConsoleOpen(true);
-      if (result.valid) toast.success(t.pipelines.validBanner);
-      else toast.error(t.pipelines.invalidBanner);
+      if (result.valid) {
+        notify.success(t.pipelines.validBanner, { description: t.notify.validationOk });
+      } else {
+        notify.warning(t.pipelines.invalidBanner, { description: t.notify.validationIssues });
+      }
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   /**
@@ -261,7 +264,9 @@ export default function PipelineEditorPage() {
 
     if (!local.valid) {
       // Local problems are node-precise; keep them instead of a server summary.
-      toast.error(`${t.pipelines.invalidBanner} ${local.issues.length} masalah ditemukan.`);
+      notify.warning(t.pipelines.invalidBanner, {
+        description: `${local.issues.length} masalah ditemukan. ${t.notify.validationIssues}`,
+      });
       return;
     }
     validateMutation.mutate();
@@ -279,8 +284,11 @@ export default function PipelineEditorPage() {
       }
       return api.pipelines.updateDag(pipelineId, { dag: graph, change_note: "Disimpan dari kanvas" });
     },
-    onSuccess: async (result) => {
-      toast.success(t.pipelines.saveSuccess);
+onSuccess: async (result) => {
+      const savedVersion = "version" in result ? result.version : result.current_version;
+      notify.success(`Versi ${savedVersion} tersimpan.`, {
+        description: t.notify.pipelineSaved,
+      });
       await queryClient.invalidateQueries({ queryKey: ["pipelines", activeProjectId] });
       if (isNew && "id" in result) {
         router.replace(`/pipelines/${result.id}`);
@@ -289,26 +297,30 @@ export default function PipelineEditorPage() {
         await queryClient.invalidateQueries({ queryKey: ["pipeline-versions", pipelineId] });
       }
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const runMutation = useMutation({
     mutationFn: () => api.pipelines.run(pipelineId),
     onSuccess: (result) => {
-      toast.success(t.pipelines.runStarted);
+      notify.success(`Run ${result.run.id} dimulai.`, {
+        description: t.notify.runStarted,
+      });
       router.push(`/runs/${result.run.id}`);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const buildMutation = useMutation({
     mutationFn: () => api.agents.startBuilder(activeProjectId as string, { description: aiPrompt }),
     onSuccess: () => {
-      toast.success("Agent sedang menyusun draf. Lihat prosesnya di Ruang Kerja Agent.");
+      notify.info("Agent sedang menyusun draf.", {
+        description: t.notify.agentDraft,
+      });
       setAiOpen(false);
       router.push("/agents");
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const addNode = (type: NodeType) => {
@@ -897,6 +909,8 @@ export default function PipelineEditorPage() {
     </div>
   );
 }
+
+
 
 
 

@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { ConfirmDialog } from "@/components/domain/confirm-dialog";
 import { ErrorState } from "@/components/domain/error-state";
@@ -48,20 +48,20 @@ export function TeamPanel() {
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => api.settings.updateRole(id, role),
     onSuccess: async () => {
-      toast.success(t.settings.saved);
+      notify.success(t.settings.saved, { description: t.notify.roleUpdated });
       await queryClient.invalidateQueries({ queryKey: ["members"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const removeMutation = useMutation({
     mutationFn: (membershipId: string) => api.settings.removeMember(membershipId),
     onSuccess: async () => {
-      toast.success(t.settings.memberRemoved);
+      notify.success(t.settings.memberRemoved, { description: t.notify.memberRemoved });
       setRemovingMember(null);
       await queryClient.invalidateQueries({ queryKey: ["members"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   return (

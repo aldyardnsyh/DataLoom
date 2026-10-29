@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, DollarSign, Hash, Timer } from "lucide-react";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { BudgetMeter } from "@/components/domain/budget-meter";
 import { EmptyState } from "@/components/domain/empty-state";
@@ -85,10 +85,10 @@ export default function UsagePage() {
         per_run_token_limit: Math.round(tokenValue),
       }),
     onSuccess: async () => {
-      toast.success(t.usage.budgetSaved);
+      notify.success(t.usage.budgetSaved, { description: t.notify.budgetSaved });
       await queryClient.invalidateQueries({ queryKey: ["usage", activeProjectId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   if (!activeProjectId) {
@@ -160,7 +160,7 @@ export default function UsagePage() {
             </p>
             <p className="mt-1 text-xl font-bold tabular">{formatNumber(totalTokens)}</p>
             <p className="text-[11px] text-muted-foreground">
-              masuk {formatNumber(summary.total_tokens_in)} · keluar {formatNumber(summary.total_tokens_out)}
+              masuk {formatNumber(summary.total_tokens_in)} Â· keluar {formatNumber(summary.total_tokens_out)}
             </p>
           </CardContent>
         </Card>
@@ -356,6 +356,7 @@ export default function UsagePage() {
     </div>
   );
 }
+
 
 
 

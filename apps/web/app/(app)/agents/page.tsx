@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, Check, Loader2, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -55,7 +55,7 @@ function evidenceText(proposal: AgentProposal): string {
     if (Array.isArray(record.items)) {
       return (record.items as Evidence[])
         .map((item) => [item.key, item.value].filter(Boolean).join(": "))
-        .join(" · ");
+        .join(" Â· ");
     }
   }
   return "";
@@ -118,21 +118,24 @@ export default function AgentWorkspacePage() {
     mutationFn: (datasetId: string) => api.agents.startProfile(activeProjectId as string, { dataset_id: datasetId }),
     onSuccess: (data) => {
       setAgentRunId(data.agent_run.id);
-      toast.success("Profil dimulai. Menunggu hasil agent…");
+      notify.info("Profil dimulai.", { description: t.notify.agentProfileStarted });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const decideMutation = useMutation({
     mutationFn: ({ id, decision, note }: { id: string; decision: "approve" | "reject"; note?: string }) =>
       api.agents.decide(id, { decision, note }),
-    onSuccess: async () => {
-      toast.success(t.agents.decisionSuccess);
+    onSuccess: async (_result, variables) => {
+      if (variables.decision === "approve") {
+        notify.success(t.agents.decisionSuccess, { description: t.notify.proposalApproved });
+      } else {
+        notify.info(t.agents.decisionSuccess, { description: t.notify.proposalRejected });
+      }
       setRejectTarget(null);
       setRejectReason("");
       await queryClient.invalidateQueries({ queryKey: ["agent-proposals", agentRunId] });
     },
-    onError: (error: Error) => toast.error(error.message),
   });
 
   const applyMutation = useMutation({
@@ -141,10 +144,10 @@ export default function AgentWorkspacePage() {
       return applyAgentProposals(agentRunId, pipelineId);
     },
     onSuccess: () => {
-      toast.success(t.agents.applySuccess);
+      notify.success(t.agents.applySuccess, { description: t.notify.agentApplied });
       void queryClient.invalidateQueries({ queryKey: ["agent-proposals", agentRunId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
   const proposals = proposalsQuery.data ?? [];
   const approved = proposals.filter((proposal) => proposal.status === "approved").length;
@@ -207,7 +210,7 @@ export default function AgentWorkspacePage() {
         <div className="flex flex-wrap items-center gap-2">
           <Select value={pipelineId} onValueChange={setPipelineId}>
             <SelectTrigger className="w-56" aria-label="Pipeline tujuan">
-              <SelectValue placeholder="Pipeline tujuan…" />
+              <SelectValue placeholder="Pipeline tujuanâ€¦" />
             </SelectTrigger>
             <SelectContent>
               {pipelines.length === 0 ? (
@@ -482,7 +485,7 @@ export default function AgentWorkspacePage() {
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-foreground">{dataset.name}</span>
                     <span className="block font-mono text-[11px] text-muted-foreground">
-                      {dataset.layer} · {formatNumber(dataset.row_count)} {t.common.rows}
+                      {dataset.layer} Â· {formatNumber(dataset.row_count)} {t.common.rows}
                     </span>
                   </span>
                   <Badge variant="outline">{LAYER_LABEL[dataset.layer] ?? dataset.layer}</Badge>
@@ -600,6 +603,7 @@ export default function AgentWorkspacePage() {
     </div>
   );
 }
+
 
 
 

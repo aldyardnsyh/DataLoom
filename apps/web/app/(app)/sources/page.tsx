@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMutation } from "@tanstack/react-query";
 import { CloudUpload, Database, FileText, Globe, Layers, Plus, RotateCw, ShieldAlert } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { uploadFile, validateFile } from "@/lib/upload";
 import { Progress } from "@/components/ui/progress";
@@ -106,7 +106,11 @@ export default function SourcesPage() {
        * to). Saying "terunggah" there would be a lie, so the wording changes
        * instead of the behaviour.
        */
-      toast.success(isDemoMode() ? t.sources.uploadDemoSuccess : t.sources.uploadSuccess);
+      if (isDemoMode()) {
+        notify.info(t.sources.uploadDemoSuccess, { description: t.notify.uploadDemo });
+      } else {
+        notify.success(t.sources.uploadSuccess, { description: t.notify.uploadCompleted });
+      }
       // A new Bronze dataset must show up in the Data Explorer without a manual
       // refresh: the previous handler reset the dialog but left the cache stale.
       await queryClient.invalidateQueries({ queryKey: ["datasets"] });
@@ -190,47 +194,62 @@ export default function SourcesPage() {
       return api.sources.create(activeProjectId as string, { name: name.trim(), config });
     },
     onSuccess: async () => {
-      toast.success(t.sources.createSuccess);
+      notify.success(`Sumber "${name.trim()}" ditambahkan.`, {
+        description: t.notify.sourceCreated,
+      });
       setName("");
       setAddOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["sources", activeProjectId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const createKeyMutation = useMutation({
     mutationFn: () => api.keys.create(activeProjectId as string, "Default key"),
     onSuccess: async (created) => {
       setCreatedKey(created);
-      toast.success(t.sources.keyRotated);
+      notify.success(t.sources.keyRotated, {
+        description: `Prefix ${created.key.prefix}. ${t.notify.keyRotated}`,
+      });
       await queryClient.invalidateQueries({ queryKey: ["api-keys", activeProjectId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const rotateMutation = useMutation({
     mutationFn: (keyId: string) => api.keys.rotate(activeProjectId as string, keyId),
     onSuccess: async (created) => {
       setCreatedKey(created);
-      toast.success(t.sources.keyRotated);
+      notify.success(t.sources.keyRotated, {
+        description: `Prefix ${created.key.prefix}. ${t.notify.keyRotated}`,
+      });
       await queryClient.invalidateQueries({ queryKey: ["api-keys", activeProjectId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const revokeMutation = useMutation({
     mutationFn: ({ keyId }: { keyId: string }) => api.keys.revoke(activeProjectId as string, keyId),
     onSuccess: async () => {
-      toast.success(t.sources.keyRevoked);
+      notify.success(t.sources.keyRevoked, { description: t.notify.keyRevoked });
       setRevoking(null);
       await queryClient.invalidateQueries({ queryKey: ["api-keys", activeProjectId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const copy = async (value: string) => {
     const ok = await copyToClipboard(value);
-    toast[ok ? "success" : "error"](ok ? t.common.copied : "Gagal menyalin");
+    if (ok) {
+      notify.success(t.common.copied, {
+        description: "Nilai disalin ke clipboard dan siap ditempel.",
+        duration: 3_000,
+      });
+    } else {
+      notify.error("Gagal menyalin", {
+        description: "Browser menolak akses clipboard. Salin nilainya secara manual.",
+      });
+    }
   };
 
   if (!activeProjectId) {
@@ -276,7 +295,7 @@ export default function SourcesPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight">{t.sources.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t.sources.subtitle} · <span className="font-medium text-foreground">{activeProject?.name}</span>
+            {t.sources.subtitle} Â· <span className="font-medium text-foreground">{activeProject?.name}</span>
           </p>
         </div>
         <Button
@@ -390,7 +409,7 @@ export default function SourcesPage() {
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                               <span className="text-[11px] text-muted-foreground">{t.sources.apiKeyPrefix}</span>
                               <Badge variant="outline" className="font-mono">
-                                {activeKey ? `dl_${activeKey.prefix}…` : "Belum ada"}
+                                {activeKey ? `dl_${activeKey.prefix}â€¦` : "Belum ada"}
                               </Badge>
                               <Button
                                 variant="outline"
@@ -516,7 +535,7 @@ export default function SourcesPage() {
               onClick={() => createMutation.mutate()}
               disabled={name.trim() === "" || createMutation.isPending || !canMutate}
             >
-              {createMutation.isPending ? "Membuat…" : t.common.create}
+              {createMutation.isPending ? "Membuatâ€¦" : t.common.create}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -574,7 +593,7 @@ export default function SourcesPage() {
                     {uploadFileState.name}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {Math.max(1, Math.round(uploadFileState.size / 1024))} KB · klik untuk mengganti
+                    {Math.max(1, Math.round(uploadFileState.size / 1024))} KB Â· klik untuk mengganti
                   </p>
                 </>
               ) : (
@@ -600,7 +619,7 @@ export default function SourcesPage() {
               onClick={() => uploadMutation.mutate()}
               disabled={!uploadFileState || uploadError !== null || uploadMutation.isPending || !canMutate}
             >
-              {uploadMutation.isPending ? "Mengunggah…" : "Unggah"}
+              {uploadMutation.isPending ? "Mengunggahâ€¦" : "Unggah"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -619,6 +638,8 @@ export default function SourcesPage() {
     </div>
   );
 }
+
+
 
 
 

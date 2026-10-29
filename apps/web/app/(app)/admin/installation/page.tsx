@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { EmptyState } from "@/components/domain/empty-state";
 import { ErrorState } from "@/components/domain/error-state";
@@ -119,12 +119,12 @@ export default function InstallationAdminPage() {
   const updateMutation = useMutation({
     mutationFn: (payload: InstallationLlmUpdate) => api.installation.update(payload),
     onSuccess: async () => {
-      toast.success(t.installation.saveSuccess);
+      notify.success(t.installation.saveSuccess, { description: t.notify.installationSaved });
       setForm((current) => ({ ...current, api_key: "" }));
       setShowKey(false);
       await queryClient.invalidateQueries({ queryKey: ["installation", "llm"] });
     },
-    onError: (error: Error) => toast.error(error.message || t.errors.generic),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message || t.errors.generic }),
   });
 
   const testMutation = useMutation({
@@ -148,12 +148,12 @@ export default function InstallationAdminPage() {
         reason: grantReason.trim() === "" ? undefined : grantReason.trim(),
       }),
     onSuccess: () => {
-      toast.success(t.installation.grantSuccess);
+      notify.success(t.installation.grantSuccess, { description: t.notify.adminGranted });
       setGrantOpen(false);
       setGrantEmail("");
       setGrantReason("");
     },
-    onError: (error: Error) => toast.error(error.message || t.errors.generic),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message || t.errors.generic }),
   });
 
   // Non-admins see a plain refusal. No query is fired (see `enabled` above), so
@@ -428,7 +428,7 @@ export default function InstallationAdminPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="submit" disabled={updateMutation.isPending || formInvalid || !canConfigure}>
-                    {updateMutation.isPending ? "Menyimpan…" : t.installation.save}
+                    {updateMutation.isPending ? "Menyimpanâ€¦" : t.installation.save}
                   </Button>
                   <Button
                     type="button"
@@ -573,7 +573,7 @@ export default function InstallationAdminPage() {
               onClick={() => grantMutation.mutate()}
               disabled={!canConfigure || !EMAIL_PATTERN.test(grantEmail.trim()) || grantMutation.isPending}
             >
-              {grantMutation.isPending ? "Memproses…" : t.installation.grantSubmit}
+              {grantMutation.isPending ? "Memprosesâ€¦" : t.installation.grantSubmit}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -581,3 +581,4 @@ export default function InstallationAdminPage() {
     </div>
   );
 }
+

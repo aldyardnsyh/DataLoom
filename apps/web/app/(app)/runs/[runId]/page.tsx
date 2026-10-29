@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RotateCcw, Square, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { EmptyState } from "@/components/domain/empty-state";
 import { ErrorState } from "@/components/domain/error-state";
@@ -74,10 +74,10 @@ export default function RunDetailPage() {
   const cancelMutation = useMutation({
     mutationFn: () => api.runs.cancel(runId),
     onSuccess: () => {
-      toast.success(t.runs.cancelled);
+      notify.success(`Run ${runId} dibatalkan.`, { description: t.notify.runCancelled });
       void queryClient.invalidateQueries({ queryKey: ["run", runId] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   const run = query.data;
@@ -175,7 +175,7 @@ export default function RunDetailPage() {
             ) : null}
           </div>
           <p className="font-mono text-xs text-muted-foreground">
-            {run.id} · v{run.version} · {run.trigger}
+            {run.id} Â· v{run.version} Â· {run.trigger}
           </p>
           {isLive && stream.connection === "disconnected" ? (
             <p role="status" className="flex items-center gap-1 text-xs font-medium text-warning-text">
@@ -298,7 +298,7 @@ export default function RunDetailPage() {
             <CardContent>
               <div className="console max-h-64 overflow-auto p-2" aria-live="polite">
                 {stream.events.length === 0 ? (
-                  <p className="text-muted-foreground">Menunggu peristiwa…</p>
+                  <p className="text-muted-foreground">Menunggu peristiwaâ€¦</p>
                 ) : (
                   stream.events.map((event) => (
                     <p key={`${event.seq}-${event.at}`} className="whitespace-pre-wrap">
@@ -329,6 +329,8 @@ export default function RunDetailPage() {
     </div>
   );
 }
+
+
 
 
 

@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderKanban, MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { ConfirmDialog } from "@/components/domain/confirm-dialog";
 import { EmptyState } from "@/components/domain/empty-state";
@@ -63,24 +63,26 @@ export default function ProjectsPage() {
   const createMutation = useMutation({
     mutationFn: () => api.projects.create({ name: name.trim(), description: description.trim() || null }),
     onSuccess: () => {
-      toast.success(t.projects.createSuccess);
+      notify.success(`Proyek "${name.trim()}" dibuat.`, {
+        description: t.notify.projectCreated,
+      });
       setCreateOpen(false);
       setName("");
       setDescription("");
       refresh();
     },
-    onError: (error: Error) => toast.error(error.message || t.projects.createFailed),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message || t.projects.createFailed }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, confirmName }: { id: string; confirmName: string }) =>
       api.projects.remove(id, confirmName),
     onSuccess: () => {
-      toast.success("Proyek dihapus.");
+      notify.success("Proyek dihapus.", { description: t.notify.projectDeleted });
       setDeleting(null);
       refresh();
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => notify.error(t.notify.failedTitle, { description: error.message }),
   });
 
   if (loading) {
@@ -258,7 +260,7 @@ export default function ProjectsPage() {
               onClick={() => createMutation.mutate()}
               disabled={name.trim() === "" || createMutation.isPending}
             >
-              {createMutation.isPending ? "Membuat…" : t.common.create}
+              {createMutation.isPending ? "Membuatâ€¦" : t.common.create}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -280,6 +282,7 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
 
 
 
