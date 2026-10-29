@@ -76,6 +76,8 @@ export interface DemoDb {
   installation: InstallationLlmStatus;
   /** Lineage per project id. */
   lineage: Record<string, LineageGraph>;
+  /** Upload sessions created in this demo tab, mapped to their dataset row. */
+  uploads: Record<string, { datasetId: string; projectId: string; filename: string }>;
   /** Plaintext of the LAST created/rotated demo key, returned exactly once. */
   lastPlaintextKey: string | null;
   /** Issues from the most recent validate call, kept so it stays consistent. */
@@ -814,6 +816,7 @@ export function createDemoDb(): DemoDb {
       ),
     },
 
+    uploads: {},
     lastPlaintextKey: null,
     lastValidation: [],
   };

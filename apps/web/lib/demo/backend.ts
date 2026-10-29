@@ -24,6 +24,7 @@ import type {
   ApiKey,
   ApiKeyCreated,
   CleaningProposal,
+  GateChecklist,
   ProfileReport,
   Pipeline,
   PipelineDAGDTO,
@@ -32,6 +33,7 @@ import type {
   ProjectSettings,
   Run,
   RunDetail,
+  RunNode,
   SessionInfo,
   Source,
   ValidationIssue,
@@ -136,6 +138,103 @@ function versionFor(pipelineId: string): PipelineVersion {
   };
   d.versions[pipelineId] = created;
   return created;
+}
+
+/**
+ * A demo run is not a dead queue row. It executes the current DAG immediately
+ * and publishes a completed timeline + gate, so the Run Monitor, Explorer,
+ * contract, and dashboard all have data after the user clicks "Jalankan".
+ */
+function completeDemoRun(run: Run, pipelineId: string): void {
+  const d = db();
+  const version = versionFor(pipelineId);
+  const order = topologicalOrder(version.dag);
+  const started = Date.now() - 18_400;
+  const totalIn = 12_400;
+  const totalOut = 12_341;
+  const quarantined = 59;
+  const nodes: RunNode[] = order.map((nodeId, index) => {
+    const definition = version.dag.nodes.find((node) => node.id === nodeId);
+    const nodeType = definition?.type ?? "transform";
+    const rowsIn = nodeType === "source" ? totalIn : index === 1 ? totalIn : totalOut;
+    const rowsOut =
+      nodeType === "validate"
+        ? totalOut
+        : nodeType === "aggregate"
+          ? 3
+          : nodeType === "sink"
+            ? 3
+            : rowsIn;
+    return {
+      id: `rn-${run.id}-${nodeId}`,
+      run_id: run.id,
+      node_id: nodeId,
+      node_type: nodeType,
+      status: "succeeded",
+      retry_count: 0,
+      started_at: new Date(started + index * 2_100).toISOString(),
+      finished_at: new Date(started + (index + 1) * 2_100).toISOString(),
+      duration_ms: 2_100,
+      rows_in: rowsIn,
+      rows_out: rowsOut,
+      rows_quarantined: nodeType === "validate" ? quarantined : 0,
+      error_code: null,
+      error_message: null,
+      error: null,
+    };
+  });
+
+  run.status = "succeeded";
+  run.current_node_id = null;
+  run.started_at = new Date(started).toISOString();
+  run.finished_at = now();
+  run.duration_ms = 18_400;
+  run.rows_in = totalIn;
+  run.rows_out = totalOut;
+  run.rows_quarantined = quarantined;
+  run.quarantine_ratio = quarantined / totalIn;
+
+  const gate: GateChecklist = {
+    run_id: run.id,
+    promotable: true,
+    evaluated_at: now(),
+    items: [
+      {
+        rule: "schema_valid",
+        decision: "pass",
+        threshold: null,
+        observed: null,
+        evidence: "Skema silver lolos validasi.",
+      },
+      {
+        rule: "quarantine_ratio",
+        decision: "pass",
+        threshold: 0.05,
+        observed: quarantined / totalIn,
+        evidence: "Rasio quarantine 0,48% (ambang 5,00%).",
+      },
+      {
+        rule: "reconciliation",
+        decision: "pass",
+        threshold: null,
+        observed: null,
+        evidence: "Rekonsiliasi baris silver dan gold cocok.",
+      },
+      {
+        rule: "pending_proposals",
+        decision: "pass",
+        threshold: null,
+        observed: 0,
+        evidence: "Tidak ada usulan agent yang wajib diputuskan.",
+      },
+    ],
+  };
+
+  d.runNodes[run.id] = nodes;
+  d.gates[run.id] = gate;
+  const project = d.projects.find((candidate) => candidate.id === run.project_id);
+  if (project) project.last_run_status = "succeeded";
+  audit("run.complete", "run", run.id);
 }
 
 function audit(action: string, targetType: string, targetId: string): void {
@@ -320,20 +419,44 @@ function route(path: string, method: string, body: Dict): unknown {
     // /projects/{id}/uploads[/{uid}/complete]
     if (sub === "uploads") {
       if (seg.length === 3 && method === "POST") {
+        const uploadId = id("up");
+        const datasetId = id("d");
+        const filename = String(body.filename ?? "unggahan.csv");
+        const slug =
+          filename
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "")
+            .slice(0, 40) || "unggahan";
+        d.datasets.push({
+          id: datasetId,
+          org_id: "demo-org",
+          project_id: projectId,
+          layer: "bronze",
+          name: `bronze_upload_${slug}`,
+          storage_uri: `demo://uploads/${uploadId}/${filename}`,
+          row_count: 0,
+          schema: [{ name: "file", dtype: "String" }],
+          updated_at: now(),
+        });
+        d.previewRows[datasetId] = [];
+        d.uploads[uploadId] = { datasetId, projectId, filename };
+        audit("upload.init", "upload", uploadId);
         return {
-          upload_id: id("up"),
-          dataset_id: id("d"),
-          storage_key: `demo/uploads/${Date.now()}`,
+          upload_id: uploadId,
+          dataset_id: datasetId,
+          storage_key: `demo/uploads/${uploadId}/${filename}`,
           parts: [{ part_number: 1, url: "demo://upload", headers: {} }],
           expires_at: new Date(Date.now() + 36e5).toISOString(),
           max_bytes: 500 * 1024 * 1024,
         };
       }
       if (sub2 === "complete") {
+        const upload = d.uploads[id2 ?? ""];
         audit("upload.complete", "upload", id2 ?? "");
         return {
           upload_id: id2 ?? id("up"),
-          dataset_id: id("d"),
+          dataset_id: upload?.datasetId ?? id("d"),
           status: "completed",
           storage_uri: "demo://upload",
           size_bytes: 0,
@@ -492,6 +615,7 @@ function route(path: string, method: string, body: Dict): unknown {
       };
       d.runs.unshift(created);
       audit("run.create", "run", created.id);
+      completeDemoRun(created, id1 ?? "");
       return { run: created, stream_url: `/v1/runs/${created.id}/events` };
     }
   }
