@@ -67,7 +67,8 @@ def test_every_org_table_is_enabled_and_forced(migration_source: str) -> None:
         "FORCE ROW LEVEL SECURITY wajib: tanpa itu pemilik tabel melewati policy (SEC-07)."
     )
 
-    listed = set(re.findall(r'"(\w+)",', migration_source.split("ORG_SCOPED_TABLES")[1].split("]")[0]))
+    table_block = migration_source.split("ORG_SCOPED_TABLES", 1)[1].split("= (", 1)[1].split(")", 1)[0]
+    listed = set(re.findall(r'"(\w+)"', table_block))
     missing = EXPECTED_ORG_TABLES - listed
     assert not missing, f"Tabel org berikut tidak ada di ORG_SCOPED_TABLES: {sorted(missing)}"
 

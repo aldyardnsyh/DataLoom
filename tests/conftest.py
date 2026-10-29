@@ -19,6 +19,7 @@ import importlib
 import importlib.abc
 import importlib.util
 import json
+from types import SimpleNamespace
 import os
 import sys
 import uuid
@@ -138,6 +139,28 @@ class _AliasFinder(importlib.abc.MetaPathFinder):
         return importlib.util.spec_from_loader(fullname, _AliasLoader(module))
 
 
+def _reset_prometheus() -> None:
+    """Drop DataLoom collectors before an app module is re-imported.
+
+    Re-importing ``api_app.api.v1.ingest`` under a different alias would
+    otherwise register the same Counter in the process-wide default registry
+    and fail with "Duplicated timeseries". Tests do not need cross-module
+    metric continuity.
+    """
+    try:
+        from prometheus_client import REGISTRY
+    except Exception:
+        return
+    collectors = getattr(REGISTRY, "_names_to_collectors", {})
+    for name, collector in list(collectors.items()):
+        if not name.startswith("dataloom_"):
+            continue
+        try:
+            REGISTRY.unregister(collector)
+        except Exception:
+            pass
+
+
 def _bind_app(name: str, *, force: bool = False) -> None:
     global _BOUND_APP, _ALIAS_FINDER
     if not force and _BOUND_APP == name and "app" in sys.modules:
@@ -148,6 +171,7 @@ def _bind_app(name: str, *, force: bool = False) -> None:
         except ValueError:
             pass
         _ALIAS_FINDER = None
+    _reset_prometheus()
     root = _APP_ROOTS[name]
     for module_name in list(sys.modules):
         if module_name == "app" or module_name.startswith("app."):
@@ -787,11 +811,11 @@ def app_factory(api_app: Any, fake_session: FakeSession, fake_redis: FakeRedis):
     Returns a small object with ``app``, ``client`` (sync portal) and the
     ability to ``login_as(actor)`` which installs an auth dependency override.
     """
-    from api_app.api.v1 import ingest as ingest_module
     from api_app.core import ratelimit as ratelimit_module
     from api_app.db import rls as rls_module
     from api_app.db import session as session_module
     from api_app import deps as deps_module
+    from api_app.services import ingest_service as ingest_service_module
 
     async def _session_override() -> AsyncIterator[FakeSession]:
         yield fake_session
@@ -807,7 +831,9 @@ def app_factory(api_app: Any, fake_session: FakeSession, fake_redis: FakeRedis):
     # Redis: patch the module attribute so both `get_redis()` call sites
     # (ratelimit + ingest_service) see the fake.
     _original_get_redis = ratelimit_module.get_redis
+    _original_ingest_get_redis = ingest_service_module.get_redis
     ratelimit_module.get_redis = lambda: fake_redis  # type: ignore[assignment]
+    ingest_service_module.get_redis = lambda: fake_redis  # type: ignore[assignment]
 
     class _Harness:
         def __init__(self) -> None:
@@ -823,11 +849,21 @@ def app_factory(api_app: Any, fake_session: FakeSession, fake_redis: FakeRedis):
             async def _ctx_override() -> Any:
                 return actor.ctx
 
+            async def _session_override() -> Any:
+                # verify_csrf() depends on get_current_session(), not on the
+                # org context. Without this override a cookie-based CSRF test
+                # gets a 401 before it can reach the 403 branch it is testing.
+                from api_app.core.security import sha256_hex
+
+                return SimpleNamespace(csrf_token_hash=sha256_hex(actor.csrf_token))
+
             api_app.dependency_overrides[deps_module.get_org_context] = _ctx_override
+            api_app.dependency_overrides[deps_module.get_current_session] = _session_override
 
         def reset(self) -> None:
             for dependency in (
                 deps_module.get_org_context,
+                deps_module.get_current_session,
                 deps_module.require_mutation,
             ):
                 api_app.dependency_overrides.pop(dependency, None)
@@ -838,6 +874,7 @@ def app_factory(api_app: Any, fake_session: FakeSession, fake_redis: FakeRedis):
         yield harness
     finally:
         ratelimit_module.get_redis = _original_get_redis  # type: ignore[assignment]
+        ingest_service_module.get_redis = _original_ingest_get_redis  # type: ignore[assignment]
         api_app.dependency_overrides.clear()
 
 

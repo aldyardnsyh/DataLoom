@@ -105,10 +105,15 @@ def test_foreign_resource_returns_404(http_client, app_factory, fake_session, ow
     fake_session.queue(FakeResult(rows=[], scalar_value=None, has_scalar=True))
 
     url = path.format(id=FOREIGN_ID)
+    headers = {**owner_a.csrf_headers, "Content-Type": "application/json"}
+    if method in {"PATCH", "POST"}:
+        # CSRF is intentionally checked before tenant scoping. Supply the
+        # double-submit cookie so this test reaches the 404 branch it targets.
+        headers["Cookie"] = f"dl_session={owner_a.session_token}; dl_csrf={owner_a.csrf_token}"
     response = http_client.request(
         method,
         url,
-        headers={**owner_a.csrf_headers, "Content-Type": "application/json"},
+        headers=headers,
         json={"name": "x"} if method in {"PATCH", "POST"} else None,
     )
 
@@ -143,14 +148,14 @@ def test_ingest_key_of_another_org_is_rejected(http_client, fake_session) -> Non
     """An API key from org B must not authenticate against org A's source (401)."""
     from api_app.core.security import generate_api_key, sha256_hex
 
-    plaintext, prefix, _key_hash = generate_api_key()
+    plaintext, key_prefix, _key_hash = generate_api_key()
 
     class ForeignKey:
         id = uuid.uuid4()
         org_id = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
         project_id = uuid.uuid4()
         name = "foreign"
-        prefix = prefix
+        prefix = key_prefix
         key_hash = sha256_hex("not-the-secret")  # deliberately wrong
         revoked_at = None
         created_at = None

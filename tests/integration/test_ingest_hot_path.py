@@ -58,7 +58,10 @@ def test_oversize_body_is_rejected_before_authentication(http_client) -> None:  
         headers={"X-API-Key": "dl_aaaaaaaa_bbbbbbbbbbbbbbbb", "Content-Type": "application/json"},
         content=payload,
     )
-    assert response.status_code in (413, 401), "Body >256 KB harus 413 (atau 401 bila key gagal lebih dulu)."
+    assert response.status_code in (413, 401), (
+        f"Body >256 KB harus 413 (atau 401 bila key gagal lebih dulu), "
+        f"bukan {response.status_code}: {response.text[:300]}"
+    )
     if response.status_code == 413:
         _error_shape(response)
 
@@ -128,11 +131,11 @@ def test_too_many_rows_is_413(http_client, fake_session) -> None:  # noqa: ANN00
 
 
 def test_valid_request_returns_202_with_accepted_count(http_client, fake_session) -> None:  # noqa: ANN001
-    from api_app.core.security import generate_api_key, sha256_hex
+    from api_app.core.security import generate_api_key
 
-    plaintext, prefix, secret = generate_api_key()
+    plaintext, prefix, key_hash = generate_api_key()
     source = _Source(type_="webhook")
-    key = _Key(sha256_hex(secret))
+    key = _Key(key_hash)
     key.prefix = prefix
     key.org_id = source.org_id
     key.project_id = source.project_id
@@ -154,32 +157,33 @@ def test_valid_request_returns_202_with_accepted_count(http_client, fake_session
 
 def test_idempotent_replay_returns_same_body(http_client, fake_session) -> None:  # noqa: ANN001
     """FR-016: a repeated Idempotency-Key must not duplicate data."""
-    from api_app.core.security import generate_api_key, sha256_hex
+    from api_app.core.security import generate_api_key
 
-    plaintext, prefix, secret = generate_api_key()
+    plaintext, prefix, key_hash = generate_api_key()
     source = _Source(type_="webhook")
-    key = _Key(sha256_hex(secret))
+    key = _Key(key_hash)
     key.prefix = prefix
     key.org_id = source.org_id
     key.project_id = source.project_id
     project = type("P", (), {"id": source.project_id})()
 
     fake_session.queue(FakeResult(rows=[(key, source, project)]))
+    fake_session.queue(FakeResult(rows=[]))  # last_used_at update
     previous = type(
         "Idem",
         (),
         {"id": uuid.uuid4(), "response_accepted": 1, "response_batch_hint": "1000"},
     )()
+    fake_session.queue(FakeResult(rows=[]))  # no prior idempotency on first request
+    fake_session.queue(FakeResult(rows=[(source.org_id, source.type, source.project_id)]))  # cache binding on replay
     fake_session.queue(FakeResult(rows=[], scalar_value=previous, has_scalar=True))
-    fake_session.queue(FakeResult(rows=[], scalar_value=previous, has_scalar=True))
-
     headers = {
         "X-API-Key": plaintext,
         "Content-Type": "application/json",
         "Idempotency-Key": "abc-123",
     }
     first = http_client.post(f"/v1/ingest/{source.id}", headers=headers, content=b'{"a":1}')
-    assert first.status_code in (202, 401, 429)
+    assert first.status_code in (202, 401, 429), first.text
     if first.status_code == 202:
         second = http_client.post(f"/v1/ingest/{source.id}", headers=headers, content=b'{"a":1}')
         assert second.status_code == 202
