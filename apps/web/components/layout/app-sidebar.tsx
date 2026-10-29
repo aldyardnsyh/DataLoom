@@ -12,6 +12,7 @@ import {
   History,
   MessageSquareCode,
   FileCheck2,
+  Rocket,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -54,6 +55,7 @@ type NavItem = { href: string; label: string; icon: typeof Gauge };
  */
 const WORKSPACE_ITEMS: NavItem[] = [
   { href: "/dashboard", label: t.nav.dashboard, icon: Gauge },
+  { href: "/setup", label: t.nav.setup, icon: Rocket },
   { href: "/projects", label: t.nav.projects, icon: FolderKanban },
   { href: "/sources", label: t.nav.sources, icon: Database },
   { href: "/pipelines", label: t.nav.pipelines, icon: Workflow },

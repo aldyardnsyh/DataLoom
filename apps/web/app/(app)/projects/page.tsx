@@ -120,6 +120,9 @@ export default function ProjectsPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t.projects.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/setup">{t.setup.title}</Link>
+          </Button>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input

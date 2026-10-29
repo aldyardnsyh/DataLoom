@@ -15,6 +15,7 @@ export const t = {
 
   nav: {
     dashboard: "Dasbor",
+    setup: "Setup",
     projects: "Proyek",
     sources: "Sumber Data",
     pipelines: "Pipeline",
@@ -118,8 +119,7 @@ export const t = {
   },
 
   notify: {
-    failedTitle: "Tindakan gagal",
-    projectCreated: "Proyek baru tersedia di ruang kerja dan siap diisi sumber data.",
+    failedTitle: "Tindakan gagal",    projectCreated: "Proyek baru tersedia di ruang kerja dan siap diisi sumber data.",
     projectDeleted: "Proyek beserta konfigurasinya dihapus dari ruang kerja.",
     sourceCreated: "Sumber siap menerima data. Salin endpoint atau API key bila diperlukan.",
     uploadDemo: "Mode demo: berkas tidak dikirim ke server, tetapi dataset Bronze baru dibuat agar alurnya bisa diperiksa.",
@@ -145,6 +145,72 @@ export const t = {
     adminGranted: "Alamat email ditambahkan sebagai admin instalasi.",
     testPassed: "Koneksi ke penyedia model berhasil.",
     testFailed: "Koneksi ke penyedia model gagal. Periksa base URL, key, dan model.",
+  },
+
+  setup: {
+    title: "Setup ruang kerja",
+    subtitle:
+      "Lima langkah dari akun kosong sampai data yang sudah melewati gerbang kualitas. Tidak ada langkah yang disembunyikan.",
+    progress: "langkah selesai",
+    statusDone: "Selesai",
+    statusNext: "Berikutnya",
+    statusTodo: "Belum",
+    projectTitle: "Buat proyek",
+    projectBody:
+      "Proyek adalah wadah data, ambang gerbang, dan pipeline. Satu organisasi bisa punya banyak proyek.",
+    projectNameLabel: "Nama proyek",
+    projectNamePlaceholder: "Penjualan Ritel",
+    projectDescriptionLabel: "Deskripsi singkat",
+    projectDescriptionPlaceholder: "Data transaksi harian untuk tim ritel.",
+    projectCreate: "Buat proyek",
+    projectCreated: "Proyek dibuat. Lanjut ke sumber data.",
+    sourceTitle: "Hubungkan sumber data",
+    sourceBody:
+      "Sumber menerima data Anda. Untuk webhook, buat API key lalu kirim POST ke endpoint ingest.",
+    sourceNameLabel: "Nama sumber",
+    sourceNamePlaceholder: "API WooCommerce",
+    sourceTypeLabel: "Jenis sumber",
+    sourceCreate: "Tambahkan sumber",
+    sourceCreated: "Sumber ditambahkan. Buat API key untuk mulai mengirim data.",
+    keyCreate: "Buat API key",
+    keyCreated: "API key dibuat.",
+    keyOnce:
+      "Key hanya ditampilkan sekali. Simpan di tempat aman; DataLoom menyimpan hash-nya.",
+    endpointLabel: "Endpoint ingest",
+    snippetLabel: "Contoh perintah",
+    snippetCopy: "Salin perintah",
+    pipelineTitle: "Buat pipeline siap pakai",
+    pipelineBody:
+      "Pipeline contoh sudah berisi sumber, validasi, dan sink Gold. Aturan kolom bisa Anda tambahkan setelah melihat data masuk.",
+    pipelineCreate: "Buat pipeline contoh",
+    pipelineCreated: "Pipeline dibuat. Jalankan sekali untuk melihat gate bekerja.",
+    pipelineMissingSource: "Buat sumber dulu, pipeline butuh sumber.",
+    runTitle: "Jalankan pipeline",
+    runBody:
+      "Run pertama adalah bukti gate bekerja: baris yang ditolak, rasio karantina, dan keputusan promosi Gold.",
+    runStart: "Jalankan pipeline",
+    runStarted: "Run dimulai. Timeline dan gate tampil di monitor run.",
+    runMissingPipeline: "Buat pipeline dulu, run butuh pipeline.",
+    reviewTitle: "Tinjau kualitas dan kontrak",
+    reviewBody:
+      "Karantina, rekonsiliasi, dan kontrak data sudah bisa dibaca. Ini yang dipakai tim Anda setiap hari.",
+    reviewData: "Buka Penjelajah Data",
+    reviewContract: "Buka Kontrak Data",
+    reviewRuns: "Buka riwayat run",
+    configTitle: "Konfigurasi yang bisa diubah dari website",
+    configBody:
+      "Ambang gerbang, kewajiban approval, model AI, dan akses tim semuanya diatur lewat halaman ini dan halaman administrasi.",
+    configThreshold: "Ambang karantina",
+    configApproval: "Persetujuan aturan destruktif",
+    configAi: "Model AI",
+    configAiReady: "Siap",
+    configAiMissing: "Belum diatur",
+    configMembers: "Anggota dan peran",
+    configAudit: "Audit log",
+    configQuality: "Ambang kualitas",
+    configOpen: "Buka",
+    demoNotice:
+      "Mode demo: langkah-langkah ini berjalan di memori browser dan tidak menyentuh server.",
   },
 
   state: {

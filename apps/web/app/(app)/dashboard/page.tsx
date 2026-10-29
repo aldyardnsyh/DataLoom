@@ -117,7 +117,7 @@ export default function DashboardPage() {
           icon={Link2}
           title={t.dashboard.noProjectsTitle}
           description={t.dashboard.noProjectsBody}
-          primaryAction={{ label: t.dashboard.createFirst, href: "/projects" }}
+          primaryAction={{ label: t.setup.title, href: "/setup" }}
         />
       </div>
     );

@@ -82,6 +82,7 @@ export function CommandPalette({
   const router = useRouter();
   const items = [
     { href: "/dashboard", label: t.nav.dashboard },
+    { href: "/setup", label: t.nav.setup },
     { href: "/projects", label: t.nav.projects },
     { href: "/sources", label: t.nav.sources },
     { href: "/pipelines", label: t.nav.pipelines },
