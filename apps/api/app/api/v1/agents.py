@@ -33,6 +33,7 @@ from app.deps import (
     get_org_context,
     get_project_or_404,
     require_mutation,
+    require_role,
     verify_csrf,
 )
 from app.services import pipeline_service
@@ -41,6 +42,7 @@ from dataloom_contracts._base import (
     AgentRunStatus,
     AgentType,
     ProposalStatus,
+    Role,
     RunStatus,
     ValidationStatus,
 )
@@ -432,6 +434,46 @@ async def decide_proposal(
         new_pipeline_version_id=row.applied_pipeline_version_id,
         audit_log_id=getattr(audit, "id", None),
     )
+
+
+@router.post(
+    "/agent-runs/{agent_run_id}/apply-fix",
+    dependencies=[Depends(verify_csrf)],
+)
+async def apply_healing_fix_endpoint(
+    agent_run_id: uuid.UUID,
+    payload: dict | None,
+    request: Request,
+    ctx: AuthContext = Depends(require_role(Role.ADMIN)),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Execute an approved healing fix: new version + requeue (owner/admin).
+
+    Owner/admin only: the fix creates a new pipeline version and enqueues a
+    run, both billable side effects. Tenant-scoped via ``ctx.org_id``.
+    """
+    from app.services import healing_service
+
+    if ctx.role not in ("owner", "admin"):
+        raise Forbidden("Hanya owner/admin yang dapat menerapkan healing fix.")
+    body = payload or {}
+    result = await healing_service.apply_approved_healing_fix(
+        session,
+        org_id=ctx.org_id,
+        agent_run_id=agent_run_id,
+        user_id=ctx.user_id,
+        actor_email=ctx.user.email,
+        requeue=bool(body.get("requeue", True)),
+        change_note=body.get("change_note"),
+        ip=client_ip(request),
+    )
+    return {
+        "pipeline_id": str(result.pipeline_id),
+        "pipeline_version_id": str(result.pipeline_version_id),
+        "version": result.version,
+        "applied_proposals": result.applied_proposals,
+        "requeued_run_id": str(result.requeued_run_id) if result.requeued_run_id else None,
+    }
 
 
 @router.post(

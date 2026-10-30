@@ -37,6 +37,7 @@ ACTIONS = frozenset(
         "run.cancel",
         "agent.start",
         "proposal.decision",
+        "healing.apply_fix",
         "membership.invite",
         "membership.role_update",
         "membership.remove",
