@@ -348,8 +348,10 @@ def write_statement_kind(sql: str, dialect: str = DEFAULT_DIALECT) -> str:
     if not statements:
         return "unknown"
     root: Any = statements[0]
+    if isinstance(root, exp.With):
+        return "with"
     if isinstance(root, exp.Select):
-        return "with" if root.args.get("with") else "select"
+        return "with" if root.args.get("with") or root.args.get("with_") else "select"
     if isinstance(root, (exp.Insert, exp.Update, exp.Delete, exp.Merge)):
         return "dml"
     if isinstance(root, (exp.Create, exp.Drop, exp.Alter)):
