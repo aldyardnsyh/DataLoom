@@ -87,6 +87,13 @@ empat aturan gate, dan status rekonsiliasi.
 
 ![Karantina dan rekonsiliasi](screenshots/11-data-quarantine.png)
 
+Tab Bronze, Silver, dan Gold memakai halaman penjelajah data yang sama dengan
+filter tab berbeda.
+
+![Data Bronze](screenshots/11a-data-bronze.png)
+![Data Silver](screenshots/11b-data-silver.png)
+![Data Gold](screenshots/11c-data-gold.png)
+
 ### Setup terpandu
 
 Lima langkah dari akun kosong sampai run pertama, lengkap dengan endpoint ingest
@@ -160,6 +167,13 @@ Konfigurasi penyedia model tingkat instalasi. Key tidak pernah dikirim balik ke
 browser.
 
 ![Instalasi model AI](screenshots/21-admin-installation.png)
+
+### Masuk dan daftar
+
+Halaman auth publik, tetap menampilkan banner mode demo.
+
+![Masuk](screenshots/29-login.png)
+![Daftar](screenshots/30-register.png)
 
 ## Mobile
 
