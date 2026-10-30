@@ -67,6 +67,13 @@ M apps/agents/app/runner.py
 Hanya file healing + transition/runner yang berubah (modified), plus file tes baru
 dan `docs/SECURITY_SELFHEAL.md` (untracked, dari lane security). Tidak ada file lain tersentuh.
 
+## 6. Re-verify 2026-10-30 (QA, backend nyata)
+
+1. Root `python -m pytest tests/unit -q` (python root): **collection error, 0 run** — 4 file error (`test_dataset_registry`, `test_parquet_preview`, `test_profiler_contract`, `test_quarantine_reasons`): `ModuleNotFoundError: polars`. Pre-existing (missing dep, bukan regresi bcc76ba/57dbea2 — commit tsb hanya sentuh agents runner + worker gate test).
+2. Root via venv agents `apps/agents/.venv/... -m pytest tests/unit --tb=no -q`: **243 passed, 77 failed, 6 skipped** (326 total). Gagal per file: `test_silver.py` 30, `test_security.py` 23, `test_ingest_limits.py` 21, `test_parquet_preview.py` 2, `test_quarantine_reasons.py` 1. Penyebab: `ModuleNotFoundError: starlette` (worker/api imports) — env issue, bukan regresi healing/transition.
+3. Healing via venv agents `-m pytest apps/agents/tests/unit tests/unit/test_transition.py -q`: **93 passed, 0 failed** (77%+23 dots konfirmasi; file heal2.txt: 93 dots).
+4. Tidak ubah kode, tidak jalankan dev server. `git status --short`: hanya `?? apps/agents/uv.lock` di luar file docs yang sudah ada.
+
 ## 5. Batasan (diketahui, bukan temuan baru)
 
 1. **MemorySaver vs PostgresSaver**: resume/healing terverifikasi dengan checkpointer

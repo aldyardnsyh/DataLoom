@@ -15,28 +15,41 @@ yang tidak diberikan formula spreadsheet atau AI cleaner:
 3. **Kontrak data yang tercetak.** Aturan validasi dan ambang proyek dibaca di
    `/data-contract`, bukan tersembunyi di kepala seseorang.
 
-## Verifikasi
+## Verifikasi (30 Okt 2026, dijalankan nyata)
 
-- `npm run typecheck`, `npm run lint`, dan `npm run build` lulus.
-- Demo desktop: 94 langkah lulus, tanpa console error.
-- Demo mobile 390x844: 41 langkah lulus, tanpa overflow dan tanpa console error.
-- Interaksi demo: buat proyek, dialog sumber, halaman agent, dan pengaturan lulus.
-- E2E regression tersimpan di repo: `npm run test:e2e` lulus 7/7, mencakup landing, rail 64px, run pipeline yang selesai dengan gate, karantina, kontrak data, notifikasi, dan sheet mobile.
-- Backend full suite `pytest tests` lulus, dengan 1 test runtime-only di-skip.
-- Bukti screenshot disimpan di `~/.browserqa/artifacts/` pada mesin QA.
+- Web: `npm run typecheck` exit 0, `npm run lint` exit 0 (no warnings/errors), `npm run build` compile + 25/25 halaman sukses.
+- Backend: `pytest tests/unit` **320 passed, 0 failed** (10 profiler contract + 310 unit lain, termasuk 84 transition, 9 healing wiring/resume).
+- Demo visual: suite browser 58/58 langkah lulus, `assert_no_console_errors` pass, 33 screenshot di `docs/screenshots/`.
+- E2E regression tersimpan di repo: `npm run test:e2e` mencakup landing, rail 64px, run pipeline selesai dengan gate, karantina, kontrak data, notifikasi, sheet mobile.
+- Self-healing: graph ter-wiring ke runner dengan approval gate manusia, tenant-scoped, cap 2 usulan per run — bukti `docs/TEST_SELFHEAL.md`, `docs/SECURITY_SELFHEAL.md` (7/7 PASS).
 
-## Stack
+## Tech stack
 
-| Lapisan | Teknologi |
-| --- | --- |
-| Web | Next.js 15.5 App Router, React 19, TypeScript strict, Tailwind CSS 3.4 |
-| UI | shadcn/ui, Radix UI, TanStack Query, TanStack Table, React Flow, Recharts, Lucide |
-| Form | react-hook-form, zod |
-| API | FastAPI, SQLAlchemy 2 async, Alembic, Pydantic v2, Argon2id, boto3 |
-| Worker | Python 3.11, Polars, DuckDB, Redis Streams consumer group |
-| Agent | LangGraph, PostgresSaver, Pydantic output, sqlglot guard |
-| Data | Postgres, Redis 7, S3-compatible object storage |
-| Infrastruktur | Docker Compose, Caddy, Prometheus |
+| Lapisan | Teknologi | Versi |
+| --- | --- | --- |
+| Web framework | Next.js App Router | 15.5 |
+| UI library | React | 19 |
+| Bahasa web | TypeScript strict | 5.x |
+| Styling | Tailwind CSS | 3.4 |
+| Komponen | shadcn/ui, Radix UI | — |
+| State server | TanStack Query | 5.90 |
+| Tabel | TanStack Table | 8.21 |
+| Kanvas DAG | React Flow (@xyflow/react) | 12.8 |
+| Chart | Recharts | — |
+| Ikon | Lucide | 0.544 |
+| Form | react-hook-form, zod | — |
+| Animasi | framer-motion | — |
+| API | FastAPI, SQLAlchemy 2 async, Alembic, Pydantic v2 | — |
+| Auth | Argon2id, sesi HttpOnly + CSRF double-submit | — |
+| Storage client | boto3 (S3-compatible) | — |
+| Worker | Python 3.11, Polars, DuckDB | 2.1 / 2.0 |
+| Queue | Redis Streams consumer group | 7 |
+| Agent | LangGraph + PostgresSaver, Pydantic output, sqlglot guard | 30.26 |
+| Data | Postgres, Redis 7, object storage S3-compatible | — |
+| Observabilitas | Prometheus client | 0.26 |
+| Infrastruktur | Docker Compose, Caddy, Prometheus | — |
+| Test web | Playwright library + Node test runner | — |
+| Test backend | pytest, pytest-asyncio | — |
 
 ## Arsitektur
 
@@ -189,7 +202,7 @@ server kedua.
 - Scheduler cron berjalan in-process; beberapa replika API membutuhkan leader
   election yang belum ada.
 - Redis AOF `everysec` dapat kehilangan sekitar satu detik data saat crash.
-- Self-healing agent masih kerangka dan belum diuji end-to-end.
+- `apply_healing_fix` mengembalikan action plan; eksekusi `new_version`/requeue milik API belum disambung.
 - Angka performa dan akurasi tidak diklaim sampai diukur di lingkungan nyata.
 
 ## Dokumentasi
@@ -199,7 +212,9 @@ server kedua.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Komponen, alur request, batas kepercayaan |
 | [`docs/PAGES.md`](docs/PAGES.md) | Rute, tujuan halaman, state |
 | [`docs/FEATURES.md`](docs/FEATURES.md) | Fitur per modul dan bukti kode |
-| [`docs/GALLERY.md`](docs/GALLERY.md) | Galeri 27 tangkapan layar desktop dan mobile |
+| [`docs/GALLERY.md`](docs/GALLERY.md) | Galeri 33 tangkapan layar desktop dan mobile |
+| [`docs/TEST_SELFHEAL.md`](docs/TEST_SELFHEAL.md) | Verifikasi self-healing: angka test dan batas |
+| [`docs/SECURITY_SELFHEAL.md`](docs/SECURITY_SELFHEAL.md) | Review keamanan self-healing: 7/7 PASS |
 
 ## Lisensi
 
