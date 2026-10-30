@@ -175,7 +175,7 @@ export default function RunDetailPage() {
             ) : null}
           </div>
           <p className="font-mono text-xs text-muted-foreground">
-            {run.id} Â· v{run.version} Â· {run.trigger}
+            {run.id} · v{run.version} · {run.trigger}
           </p>
           {isLive && stream.connection === "disconnected" ? (
             <p role="status" className="flex items-center gap-1 text-xs font-medium text-warning-text">
@@ -298,7 +298,7 @@ export default function RunDetailPage() {
             <CardContent>
               <div className="console max-h-64 overflow-auto p-2" aria-live="polite">
                 {stream.events.length === 0 ? (
-                  <p className="text-muted-foreground">Menunggu peristiwaâ€¦</p>
+                  <p className="text-muted-foreground">Menunggu peristiwa…</p>
                 ) : (
                   stream.events.map((event) => (
                     <p key={`${event.seq}-${event.at}`} className="whitespace-pre-wrap">

@@ -160,7 +160,7 @@ export default function UsagePage() {
             </p>
             <p className="mt-1 text-xl font-bold tabular">{formatNumber(totalTokens)}</p>
             <p className="text-[11px] text-muted-foreground">
-              masuk {formatNumber(summary.total_tokens_in)} Â· keluar {formatNumber(summary.total_tokens_out)}
+              masuk {formatNumber(summary.total_tokens_in)} · keluar {formatNumber(summary.total_tokens_out)}
             </p>
           </CardContent>
         </Card>

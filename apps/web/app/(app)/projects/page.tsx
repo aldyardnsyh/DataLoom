@@ -263,7 +263,7 @@ export default function ProjectsPage() {
               onClick={() => createMutation.mutate()}
               disabled={name.trim() === "" || createMutation.isPending}
             >
-              {createMutation.isPending ? "Membuatâ€¦" : t.common.create}
+              {createMutation.isPending ? "Membuat…" : t.common.create}
             </Button>
           </DialogFooter>
         </DialogContent>

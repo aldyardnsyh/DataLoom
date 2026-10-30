@@ -55,7 +55,7 @@ function evidenceText(proposal: AgentProposal): string {
     if (Array.isArray(record.items)) {
       return (record.items as Evidence[])
         .map((item) => [item.key, item.value].filter(Boolean).join(": "))
-        .join(" Â· ");
+        .join(" · ");
     }
   }
   return "";
@@ -210,7 +210,7 @@ export default function AgentWorkspacePage() {
         <div className="flex flex-wrap items-center gap-2">
           <Select value={pipelineId} onValueChange={setPipelineId}>
             <SelectTrigger className="w-56" aria-label="Pipeline tujuan">
-              <SelectValue placeholder="Pipeline tujuanâ€¦" />
+              <SelectValue placeholder="Pipeline tujuan…" />
             </SelectTrigger>
             <SelectContent>
               {pipelines.length === 0 ? (
@@ -485,7 +485,7 @@ export default function AgentWorkspacePage() {
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-foreground">{dataset.name}</span>
                     <span className="block font-mono text-[11px] text-muted-foreground">
-                      {dataset.layer} Â· {formatNumber(dataset.row_count)} {t.common.rows}
+                      {dataset.layer} · {formatNumber(dataset.row_count)} {t.common.rows}
                     </span>
                   </span>
                   <Badge variant="outline">{LAYER_LABEL[dataset.layer] ?? dataset.layer}</Badge>

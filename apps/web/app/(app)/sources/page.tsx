@@ -295,7 +295,7 @@ export default function SourcesPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight">{t.sources.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t.sources.subtitle} Â· <span className="font-medium text-foreground">{activeProject?.name}</span>
+            {t.sources.subtitle} · <span className="font-medium text-foreground">{activeProject?.name}</span>
           </p>
         </div>
         <Button
@@ -409,7 +409,7 @@ export default function SourcesPage() {
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                               <span className="text-[11px] text-muted-foreground">{t.sources.apiKeyPrefix}</span>
                               <Badge variant="outline" className="font-mono">
-                                {activeKey ? `dl_${activeKey.prefix}â€¦` : "Belum ada"}
+                                {activeKey ? `dl_${activeKey.prefix}…` : "Belum ada"}
                               </Badge>
                               <Button
                                 variant="outline"
@@ -535,7 +535,7 @@ export default function SourcesPage() {
               onClick={() => createMutation.mutate()}
               disabled={name.trim() === "" || createMutation.isPending || !canMutate}
             >
-              {createMutation.isPending ? "Membuatâ€¦" : t.common.create}
+              {createMutation.isPending ? "Membuat…" : t.common.create}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -593,7 +593,7 @@ export default function SourcesPage() {
                     {uploadFileState.name}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {Math.max(1, Math.round(uploadFileState.size / 1024))} KB Â· klik untuk mengganti
+                    {Math.max(1, Math.round(uploadFileState.size / 1024))} KB · klik untuk mengganti
                   </p>
                 </>
               ) : (
@@ -619,7 +619,7 @@ export default function SourcesPage() {
               onClick={() => uploadMutation.mutate()}
               disabled={!uploadFileState || uploadError !== null || uploadMutation.isPending || !canMutate}
             >
-              {uploadMutation.isPending ? "Mengunggahâ€¦" : "Unggah"}
+              {uploadMutation.isPending ? "Mengunggah…" : "Unggah"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,7 +8,7 @@ Rather than spinning up Postgres, these tests attack the application filter at
 the level that matters: for each route we feed the ``FakeSession`` a row that
 BELONGS to org B and assert the response is 404. If a handler forgets
 ``org_id == ctx.org_id`` in its WHERE clause, the fake hands the foreign row over
-and the response becomes 200 â€” the test fails loudly.
+and the response becomes 200 — the test fails loudly.
 """
 
 from __future__ import annotations

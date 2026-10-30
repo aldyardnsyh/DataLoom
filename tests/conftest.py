@@ -92,6 +92,7 @@ _APP_BY_TEST = {
     "test_installation_settings": "api",
     "test_parquet_preview": "api",
     "test_pipeline_versions": "api",
+    "test_healing_apply_fix": "api",
     "test_rbac": "api",
     "test_security": "api",
     "test_tenant_isolation": "api",
@@ -107,6 +108,7 @@ _APP_BY_TEST = {
     "test_silver": "worker",
     "test_transition": "worker",
     "test_worker_restart": "worker",
+    "test_scheduler_leader": "api",
 }
 
 
@@ -615,6 +617,8 @@ class FakeRedis:
     async def set(self, key: str, value: Any, *args: Any, **kwargs: Any) -> bool:
         self._record("set", key, value)
         self._maybe_raise("set")
+        if kwargs.get("nx") and key in self.kv:
+            return False  # type: ignore[return-value] — SET NX gagal: kunci milik replika lain
         self.kv[key] = value
         return True
 
@@ -638,6 +642,11 @@ class FakeRedis:
 
     async def ping(self) -> bool:
         return True
+
+    async def pexpire(self, key: str, ms: int) -> bool:
+        self._record("pexpire", key, ms)
+        self._maybe_raise("pexpire")
+        return key in self.kv
 
     def pipeline(self, transaction: bool = True) -> FakePipeline:
         return FakePipeline(self)

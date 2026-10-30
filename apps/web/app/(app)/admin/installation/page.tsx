@@ -428,7 +428,7 @@ export default function InstallationAdminPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="submit" disabled={updateMutation.isPending || formInvalid || !canConfigure}>
-                    {updateMutation.isPending ? "Menyimpanâ€¦" : t.installation.save}
+                    {updateMutation.isPending ? "Menyimpan…" : t.installation.save}
                   </Button>
                   <Button
                     type="button"
@@ -573,7 +573,7 @@ export default function InstallationAdminPage() {
               onClick={() => grantMutation.mutate()}
               disabled={!canConfigure || !EMAIL_PATTERN.test(grantEmail.trim()) || grantMutation.isPending}
             >
-              {grantMutation.isPending ? "Memprosesâ€¦" : t.installation.grantSubmit}
+              {grantMutation.isPending ? "Memproses…" : t.installation.grantSubmit}
             </Button>
           </DialogFooter>
         </DialogContent>

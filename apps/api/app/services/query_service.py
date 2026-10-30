@@ -1,7 +1,7 @@
 ﻿"""Query service: read-only DuckDB access for Explorer + Text-to-SQL (FR-033/041).
 
 Four layers of defence, all independent:
-1. ``sqlglot`` AST validation (``validate_readonly_sql``) â€” the authoritative
+1. ``sqlglot`` AST validation (``validate_readonly_sql``) — the authoritative
    guard; comments, CTE-wrapped DML and ``sqlite_scan``-style functions are
    rejected there, not by a string prefix test.
 2. A per-project table allowlist derived from ``datasets`` (silver/gold only,
@@ -136,7 +136,7 @@ def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
 
     Raises :class:`UnsafeQuery`. Mirrors ``apps/agents/app/tools/sql_guard.py``
     (same reason codes) because the SQL reaching this function comes from a
-    *model* â€” the string prefix check this replaced could be bypassed with a
+    *model* — the string prefix check this replaced could be bypassed with a
     leading comment (``/* x */ DELETE``) or a ``WITH ... (DELETE)`` CTE.
     """
     if sql is None or not isinstance(sql, str) or not sql.strip():
@@ -158,7 +158,7 @@ def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
     # so token offsets stay valid). The AST below is authoritative for *meaning*;
     # this only stops a comment from hiding a statement separator from the cheap
     # scan that follows. If the private scan API is unavailable we fall back to
-    # the raw text â€” the AST check still runs.
+    # the raw text — the AST check still runs.
     try:
         scanned = Tokenizer(dialect="duckdb")._scan(body)  # type: ignore[attr-defined]
         if scanned:
@@ -246,8 +246,8 @@ def _warehouse_path(org_id: uuid.UUID, project_id: uuid.UUID) -> str:
 def _open(path: str) -> duckdb.DuckDBPyConnection:
     """Open the warehouse READ-ONLY with every cheap engine-level defence on.
 
-    ``read_only=True`` is the guarantee that no statement â€” however it was
-    validated, and whichever validator ran â€” can write to (or
+    ``read_only=True`` is the guarantee that no statement — however it was
+    validated, and whichever validator ran — can write to (or
     ``CREATE OR REPLACE``) a gold table: DuckDB refuses the write itself.
 
     ``enable_external_access=false`` is set first so it is in force for every
@@ -375,7 +375,7 @@ async def get_dataset(
     """Fetch a dataset scoped to org (and optionally project).
 
     Filtering by BOTH ids means a valid dataset id from another project of the
-    SAME org is also rejected â€” the dataset must belong to the project in the
+    SAME org is also rejected — the dataset must belong to the project in the
     URL, not merely to the tenant.
     """
     stmt = select(Dataset).where(Dataset.id == dataset_id, Dataset.org_id == org_id)
