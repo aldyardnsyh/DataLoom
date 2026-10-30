@@ -2,8 +2,10 @@
 
 Minimal by design (D-03): a single in-process APScheduler instance that creates
 runs for pipelines with a cron expression, respecting the project's
-``max_concurrent_runs``. No distributed lock: with more than one API replica
-this must move to a leader-election or a DB advisory lock.
+``max_concurrent_runs``. Multi-replica safety via Redis leader election
+(``SET NX PX`` + refresh): only the lock holder runs ``_tick``; followers
+skip with a log. Fail-open: if Redis is down, the replica proceeds so a
+single-replica deployment keeps working.
 """
 
 from __future__ import annotations
@@ -23,6 +25,39 @@ logger = logging.getLogger("dataloom.scheduler")
 
 _scheduler: AsyncIOScheduler | None = None
 
+#: Redis key for scheduler leader election (multi-replica safety).
+#: Owner refreshes TTL on every tick; TTL > interval so a live leader never loses it.
+LEADER_KEY = "dataloom:scheduler:leader"
+LEADER_TTL_SECONDS = 90
+
+_leader_token: str = uuid.uuid4().hex
+
+
+async def _ensure_leader() -> bool:
+    """Try to acquire/refresh the leader lock. ``True`` = this replica is leader."""
+    global _leader_token
+    try:
+        from app.core.ratelimit import get_redis
+
+        client = get_redis()
+        current = await client.get(LEADER_KEY)
+        if current is None:
+            acquired = await client.set(
+                LEADER_KEY, _leader_token, nx=True, px=LEADER_TTL_SECONDS * 1000
+            )
+            if acquired:
+                logger.info("Scheduler menjadi leader.")
+                return True
+            return False
+        if current == _leader_token:
+            await client.pexpire(LEADER_KEY, LEADER_TTL_SECONDS * 1000)
+            return True
+        logger.info("Scheduler follower: lewati tick (leader aktif).")
+        return False
+    except Exception as exc:  # noqa: BLE001 - Redis down: single-replica tetap jalan (fail open)
+        logger.warning("Lock leader tak tersedia, jalan sebagai leader: %s", exc)
+        return True
+
 
 def validate_cron(expression: str) -> bool:
     """Accept standard 5-field cron only. Returns ``False`` instead of raising."""
@@ -38,6 +73,8 @@ def validate_cron(expression: str) -> bool:
 
 async def _tick() -> None:
     """Evaluate due pipelines and enqueue runs (idempotent per minute)."""
+    if not await _ensure_leader():
+        return
     factory = get_session_factory()
     async with factory() as session:
         pipelines = (
